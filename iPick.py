@@ -32,16 +32,35 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
+from __future__ import print_function
 import os
 import sys
 import argparse
+
+if sys.version_info[0] == 2:
+    import ucsftool
+else:
+    import ucsftool3 as ucsftool
+
+ut = ucsftool.ucsfTool()
 
 DESC = '\nIntegrated UCSF Peak Picker v0.1\n\t\
     by Woonghee Lee (whlee@nmrfam.wisc.edu)\n'
 
 NMRGLUE_PATH = 'nmrglue-0.7'
 UCSFTOOL_PATH = '.'
+
+def print_log(*args):
+    msg = ''
+    for s in args:
+        try:
+            msg += str(s)
+        except:
+            msg += '! Could not convert to String'
+    f = open('/tmp/process.log', 'a')
+    f.write(msg + '\n')
+    f.close()
+    print(*args)
 
 
 def parse_args():
@@ -116,11 +135,19 @@ def parse_args():
     return args
 
 
+def get_noise_level(in_filename):
+    ut.ucsf_open(in_filename, nproc=1, cache_mode=False)
+    noise = ut.sample_noise(100)
+    multthresh = 8.5
+    noiselevel = abs(noise * multthresh)
+    return noiselevel
+
+
 def main():
     args = parse_args()
-    print(DESC)
+    print_log(DESC)
     if not args.input:
-        print('Input file not specified. "iPick3.py -h" to show options.')
+        print_log('Input file not specified. "iPick.py -h" to show options.')
         return
     in_filename = args.input
 
@@ -138,14 +165,9 @@ def main():
     try:
         import nmrglue as ng
     except ImportError:
-        print('ERROR: Importing NMRGLUE failed.')
+        print_log('Importing NMRGLUE failed. Using UCSFtool instead.')
 
-    if sys.version_info[0] == 2:
-        import ucsftool
-    else:
-        import ucsftool3 as ucsftool
 
-    ut = ucsftool.ucsfTool()
     if args.software == 'ucsftool':
         ut.ucsf_open(in_filename, nproc=args.nproc)
     else:
@@ -157,32 +179,35 @@ def main():
             return
 
     if os.path.exists(out_filename) and not args.overwrite:
-        print('Output file %s already exists.' % (out_filename))
+        print_log('Output file %s already exists.' % (out_filename))
         return
 
     ndim = len(ut.axis_header_list)
-    print('Use UCSFTOOL to sample noise level.')
+    print_log('Using UCSFTOOL to sample noise level.')
+ 
     noise = ut.sample_noise(100)
 
     if args.threshold:
         noiselevel = abs(args.threshold)
     else:
         noiselevel = abs(noise * args.multthresh)
-    print('Noise level: ' + str(noiselevel))
+
+
+    print_log('Noise level: ' + str(noiselevel))
     if args.number:
         peak_count = args.number
-        print('Peak count: ' + str(peak_count))
+        print_log('Peak count: ' + str(peak_count))
 
     if args.software == 'ucsftool':
-        print('Use UCSFTOOL to detect local maxima.')
+        print_log('Using UCSFTOOL to detect local maxima.')
         if args.ress:
             res = list(map(lambda x: int(args.ress[x]), range(len(args.ress))))
         else:
             res = [args.res] * ndim
-        print('Resolution setting: ', res)
+        print_log('Resolution setting: ', res[0])
         grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=0, verbose=True)
     else:
-        print('Use NMRGLUE to detect local maxima.')
+        print_log('Using NMRGLUE to detect local maxima.')
         _, data = ng.sparky.read(in_filename)
         grid_peaks = ng.analysis.peakpick.pick(data,
                                                noiselevel,
@@ -192,10 +217,10 @@ def main():
         peak_count = min(peak_count, len(grid_peaks))
     else:
         peak_count = len(grid_peaks)
-    print('Detected peak count: ' + str(len(grid_peaks)))
+    print_log('Detected peak count: ' + str(len(grid_peaks)))
 
     # interpolation and get adjusted data heights
-    print('Use UCSFTOOL to interpolate and obtain adjusted heights.')
+    print_log('Using UCSFTOOL to interpolate and obtain adjusted heights.')
     peak_list, hts_list = [], []
     for grid_peak in grid_peaks:
         grid_pt = ()
@@ -206,18 +231,18 @@ def main():
         hts_list.append(value)
 
     # sort by adjusted heights
-    print('Use UCSFTOOL to sort and filter peaks.')
+    print_log('Using UCSFTOOL to sort and filter peaks.')
     sort_peaks, sort_hts = ut.filter_peaks_by_count(peak_list,
                                                     hts_list,
                                                     peak_count)
 
     if len(sort_peaks) == 0:
-        print('No peak detected.')
+        print_log('No peak detected.')
         return
 
-    print('Use UCSFTOOL to write a SPARKY peak list.')
+    print_log('Using UCSFTOOL to write a SPARKY peak list.')
     ut.write_sparky_peaks(out_filename, sort_peaks, sort_hts)
-    print('%d peaks written in %s' % (peak_count, out_filename))
+    print_log('%d peaks written in %s' % (peak_count, out_filename))
     ut.ucsf_close()
 
 

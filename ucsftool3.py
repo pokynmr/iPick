@@ -92,6 +92,17 @@ unpack_byte = struct.Struct('>B').unpack
 unpack_int = struct.Struct('>I').unpack
 pack_float = struct.Struct('>f').pack
 
+def print_log(*args):
+    msg = ''
+    for s in args:
+        try:
+            msg += str(s)
+        except:
+            msg += '! Could not convert to String'
+    f = open('/tmp/process.log', 'a')
+    f.write(msg + '\n')
+    f.close()
+    print(*args)
 
 def interpolation(f1, f2, f3):
     a0 = f1
@@ -180,7 +191,7 @@ class ucsfTool:
     # Help
     #
     def help(self):
-        print("""
+        print_log("""
         ucsf_open(optional: filename)
         ucsf_close()
         dummy_file_header()
@@ -300,7 +311,7 @@ class ucsfTool:
     #
     def set_filename(self, file_name):
         if self.is_opened == 1:
-            print('Error in ucsfTool:set_filename()- file name is already assigned')
+            print_log('Error in ucsfTool:set_filename()- file name is already assigned')
             return 0
         self.file_name = file_name
         return 1
@@ -316,14 +327,14 @@ class ucsfTool:
     #
     def ucsf_open(self, in_filename=None, nproc=1, cache_mode=True):
         if self.is_opened == 1:
-            print('Error in ucsfTool:ucsf_open()- file is already opened')
+            print_log('Error in ucsfTool:ucsf_open()- file is already opened')
             return 0
 
         if in_filename is not None:
             self.set_filename(in_filename)
 
         if not os.path.exists(self.file_name):
-            print('Error in ucsfTool:ucsf_open()- file(%s) does not exist'
+            print_log('Error in ucsfTool:ucsf_open()- file(%s) does not exist'
                   % (self.file_name))
             return 0
 
@@ -333,7 +344,7 @@ class ucsfTool:
         self.file_object[0].seek(0, 2)  # seek_end
         self.file_size = self.file_object[0].tell()
         if self.file_size < 180 + 128*2:  # 180: file header, 128: axis header
-            print('Error in ucsfTool:ucsf_open()- file size too small (%d)'
+            print_log('Error in ucsfTool:ucsf_open()- file size too small (%d)'
                   % (self.file_size))
             self.ucsf_close()
             return 0
@@ -376,32 +387,32 @@ class ucsfTool:
     #
     def read_file_header(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:read_file_header()- file is not opened')
+            print_log('Error in ucsfTool:read_file_header()- file is not opened')
             return 0
 
         self.file_object[0].seek(0)
         temp = self.file_object[0].read(16)
         if temp[0:8].decode('ascii') != 'UCSF NMR':
-            print('Error in ucsfTool:read_file_header()- UCSF NMR tag not found')
+            print_log('Error in ucsfTool:read_file_header()- UCSF NMR tag not found')
             return 0
 
         self.file_header['FileType'] = temp[0:8].decode('ascii')
         try:
             self.file_header['DimCount'] = temp[10]
         except Exception:
-            print('Error in ucsfTool:read_file_header()- dimension is incorrect')
+            print_log('Error in ucsfTool:read_file_header()- dimension is incorrect')
             return 0
 
         try:
             self.file_header['DataCompCount'] = temp[11]
         except Exception:
-            print('Error in ucsfTool:read_file_header()- data component is incorrect')
+            print_log('Error in ucsfTool:read_file_header()- data component is incorrect')
             return 0
 
         try:
             self.file_header['FileVersion'] = temp[13]
         except Exception:
-            print('Error in ucsfTool:read_file_header()- file version is incorrect')
+            print_log('Error in ucsfTool:read_file_header()- file version is incorrect')
             return 0
 
         return 1
@@ -410,7 +421,7 @@ class ucsfTool:
 
     def read_axis_header(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:read_axis_header()- file is not opened')
+            print_log('Error in ucsfTool:read_axis_header()- file is not opened')
             return 0
 
         try:
@@ -448,14 +459,14 @@ class ucsfTool:
             self.fd_divider = float(self.axis_header_list[0]['DataPointCount']) / \
                 float(self.nproc)
             if self.nproc != 1:
-                print('X axis data points: %d' %
+                print_log('X axis data points: %d' %
                       (self.axis_header_list[0]['DataPointCount']))
-                # print('fd_divider set to: %d' % (self.fd_divider))
-                print('fd_divider set to: %f' % (self.fd_divider))
+                # print_log('fd_divider set to: %d' % (self.fd_divider))
+                print_log('fd_divider set to: %f' % (self.fd_divider))
         except Exception:
             msg = 'Error in ucsfTool:read_axis_header()- processing dimension '
             msg = msg + '%d failed' % (i+1)
-            print(msg)
+            print_log(msg)
             return 0
 
         # make tuples for performance
@@ -474,7 +485,7 @@ class ucsfTool:
 
     def print_file_info(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:read_axis_header()- file is not opened')
+            print_log('Error in ucsfTool:read_axis_header()- file is not opened')
             return 0
         ahl = self.axis_header_list
 
@@ -482,19 +493,19 @@ class ucsfTool:
         for i in range(self.ndim):
             ah = ahl[i]
             line = line + '%11s%d' % ('w', i+1)
-        print(line)
+        print_log(line)
 
         line = '%-20s' % ('nucleus')
         for ah in ahl:
             line = line + '%12s' % (ah['AtomName'])
-        print(line)
+        print_log(line)
 
         for col, head in [['matrix size', 'DataPointCount'],
                           ['block size', 'TileSize']]:
             line = '%-20s' % (col)
             for ah in ahl:
                 line = line + '%12d' % (ah[head])
-            print(line)
+            print_log(line)
 
         for col, head in [['upfield ppm', 'FreqMin'],
                           ['downfield ppm', 'FreqMax'],
@@ -503,38 +514,38 @@ class ucsfTool:
             line = '%-20s' % (col)
             for ah in ahl:
                 line = line + '%12.3f' % (ah[head])
-            print(line)
+            print_log(line)
 
     # ---------------------------------------------------------------------------
     # show the raw header data
 
     def get_raw_header(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:read_axis_header()- file is not opened')
+            print_log('Error in ucsfTool:read_axis_header()- file is not opened')
             return 0
-        print(self.axis_header_list)
+        print_log(self.axis_header_list)
 
     # ---------------------------------------------------------------------------
     # dump all data points
 
     def dump_data_2d(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:read_axis_header()- file is not opened')
+            print_log('Error in ucsfTool:read_axis_header()- file is not opened')
             return 0
         ahl = self.axis_header_list
         x = ahl[0]['DataPointCount']
         y = ahl[1]['DataPointCount']
         for i in range(x):
             for j in range(y - 1):
-                print('{},'.format(self.get_data([i, j])), end='')
-            print(self.get_data([i, j + 1]))
+                print_log('{},'.format(self.get_data([i, j])), end='')
+            print_log(self.get_data([i, j + 1]))
 
     # ---------------------------------------------------------------------------
     # Calculate pixel size for a grid
 
     def calculate_pixel_size(self):
         if self.is_opened == 0:
-            print('Error in ucsfTool:calculate_pixel_size()- file is not opened')
+            print_log('Error in ucsfTool:calculate_pixel_size()- file is not opened')
             return None
 
         self.pixel_size = ()
@@ -592,7 +603,7 @@ class ucsfTool:
     #
     def grid_to_tile_and_remain_indices(self, grid_pt):
         if self.is_opened == 0:
-            print('Error in ucsfTool:grid_to_tile_and_indices()- file is not opened')
+            print_log('Error in ucsfTool:grid_to_tile_and_indices()- file is not opened')
             return None
         tile_pt = ()
         remain_pt = ()
@@ -638,7 +649,7 @@ class ucsfTool:
     #
     def tile_and_remain_indices_to_grid(self, tile_pt, index_pt):
         if self.is_opened == 0:
-            print('Error in ucsfTool:tile_and_indices_to_grid()- file is not opened')
+            print_log('Error in ucsfTool:tile_and_indices_to_grid()- file is not opened')
             return None
         grid_pt = []
         for i in range(self.ndim):
@@ -651,7 +662,7 @@ class ucsfTool:
         if self.is_opened == 0:
             msg = 'Error in ucsfTool:remain_indices_to_remain_index()- '
             msg = msg + 'file is not opened'
-            print(msg)
+            print_log(msg)
             return None
         sum_size = 0
         for i in range(self.ndim):
@@ -707,7 +718,7 @@ class ucsfTool:
 
     def get_data(self, grid_pt):
         if self.is_opened == 0:
-            print('Error in ucsfTool:get_data()- file is not opened')
+            print_log('Error in ucsfTool:get_data()- file is not opened')
             return None
         tile_indices, remain_pt = self.grid_to_tile_and_remain_indices(grid_pt)
         fdidx = min(int(float(grid_pt[0]) / self.fd_divider), self.nproc-1)
@@ -740,7 +751,7 @@ class ucsfTool:
 
     def get_data_by_shifts(self, shift_pt):
         if self.is_opened == 0:
-            print('Error in ucsfTool:get_data_shifts()- file is not opened')
+            print_log('Error in ucsfTool:get_data_shifts()- file is not opened')
             return None
 
         # shifts to grids
@@ -754,7 +765,7 @@ class ucsfTool:
 
     def get_interpolated_data(self, grid_pt):
         if self.is_opened == 0:
-            print('Error in ucsfTool:get_interpolated_data()- file is not opened')
+            print_log('Error in ucsfTool:get_interpolated_data()- file is not opened')
             return None
 
         shifts = [0.0] * len(grid_pt)
@@ -780,7 +791,7 @@ class ucsfTool:
         if self.is_opened == 0:
             msg = 'Error in ucsfTool:get_interpolated_data_by_shifts()- '
             msg = msg + 'file is not opened'
-            print(msg)
+            print_log(msg)
             return None
 
         # shifts to grids
@@ -941,8 +952,8 @@ class ucsfTool:
                 range_list.append(range(ahl[i]['DataPointCount']))
 
         if verbose and self.nproc != 1:
-            print(datetime.datetime.now())
-            print('Creating multiprocesses')
+            print_log(datetime.datetime.now())
+            print_log('Creating multiprocesses')
         # divide for parallelization: dim 1
         x_range = list(map(lambda x: [], range(self.nproc)))
         for i in range(len(range_list[0])):
@@ -979,7 +990,7 @@ class ucsfTool:
             for j in range(1, len(ahl)):
                 permute_count *= len(range_list[j])
             if verbose:
-                print('Process %d: %d permutes' % (i+1, permute_count))
+                print_log('Process %d: %d permutes' % (i+1, permute_count))
             t = multiprocessing.Process(target=self.process_find_peaks,
                                         args=[it, permute_count, noise_level,
                                               grid_buffers, sign, i,
@@ -994,8 +1005,8 @@ class ucsfTool:
         for t in process_list:
             t.join()
         if verbose and self.nproc != 1:
-            print(datetime.datetime.now())
-            print('Find peaks: %d peaks' % (len(grid_peaks)))
+            print_log(datetime.datetime.now())
+            print_log('Find peaks: %d peaks' % (len(grid_peaks)))
         return grid_peaks, heights
 
     def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
@@ -1010,8 +1021,8 @@ class ucsfTool:
                 tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
                 if tmp_percent > cur_percent:
                     cur_percent = tmp_percent
-                    print(datetime.datetime.now())
-                    print('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
+                    print_log(datetime.datetime.now())
+                    print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
             pts = tuple(itertools.islice(it, chunk_size))
             pks, hts = self.find_peaks_per_node(pts, noise_level,
                                                 grid_buffers, sign,
@@ -1153,7 +1164,7 @@ class ucsfTool:
         else:
             thresh = threshold
         if verbose:
-            print('Noise level: %d' % (thresh))
+            print_log('Noise level: %d' % (thresh))
         if grid_buffers is None:
             g_buffers = list(map(lambda x: 2, range(len(self.axis_header_list))))
         else:
@@ -1164,7 +1175,7 @@ class ucsfTool:
         if max_count is not None:
             pks2, _ = self.filter_peaks_by_count(pks, hts, max_count)
             if verbose:
-                print('Filtered by peak count: %d ---> %d' % (len(pks), len(pks2)))
+                print_log('Filtered by peak count: %d ---> %d' % (len(pks), len(pks2)))
             peaks = self.points_to_peaks(pks2)
         else:
             peaks = self.points_to_peaks(pks)
@@ -1231,7 +1242,7 @@ class ucsfTool:
             except:
                 continue
 
-        print('%d sparky peaks made' % (len(spts)))
+        print_log('%d sparky peaks made' % (len(spts)))
         return sum(spts, [])
 
     # ---------------------------------------------------------------------------
@@ -1283,19 +1294,19 @@ class ucsfTool:
             overwrite)                    # overwrite 0 or 1
         """
         if self.is_opened == 0:
-            print('Error in ucsfTool:write_transform()- file is not opened')
+            print_log('Error in ucsfTool:write_transform()- file is not opened')
             return None
 
         if overwrite == 0 and os.path.exists(out_filename):
-            print('Error in ucsfTool:write_transform()- output file already exists')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_transform()- output file already exists')
+            print_log(use_logo)
             return 0
 
         try:
             trans_mode = ['mult', 'comb', 'subt', 'pow', 'abs'].index(transform_mode)
         except:
-            print('Error in ucsfTool:write_transform()- incorrect transform mode')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_transform()- incorrect transform mode')
+            print_log(use_logo)
             return 0
 
         f = open(out_filename, 'wb')
@@ -1338,12 +1349,12 @@ class ucsfTool:
                                        overwrite=0)    # overwrite 0 or 1
         """
         if self.is_opened == 0:
-            print('Error in ucsfTool:write_projection()- file is not opened')
+            print_log('Error in ucsfTool:write_projection()- file is not opened')
             return None
 
         if overwrite == 0 and os.path.exists(out_filename):
-            print('Error in ucsfTool:write_projection()- output file already exists')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_projection()- output file already exists')
+            print_log(use_logo)
             return 0
 
         try:
@@ -1357,8 +1368,8 @@ class ucsfTool:
                 p_mode = -1
                 sign_mode = 1
             else:
-                print('Error in ucsfTool:write_projection()- incorrect projection mode')
-                print(use_logo)
+                print_log('Error in ucsfTool:write_projection()- incorrect projection mode')
+                print_log(use_logo)
                 return 0
 
         # write header
@@ -1366,14 +1377,14 @@ class ucsfTool:
         if file_header['DimCount'] < 3:
             msg = 'Error in ucsfTool:write_projection()- current ucsf dimension '
             msg = msg + 'must be 3 or 4'
-            print(msg)
-            print(use_logo)
+            print_log(msg)
+            print_log(use_logo)
             return 0
         if proj_dim < 1 or proj_dim > file_header['DimCount']:
             msg = 'Error in ucsfTool:write_projection()- incorrect projection '
             msg = msg + 'dimension'
-            print(msg)
-            print(use_logo)
+            print_log(msg)
+            print_log(use_logo)
             return 0
 
         f = open(out_filename, 'wb')
@@ -1466,12 +1477,12 @@ class ucsfTool:
             overwrite=0)                # overwrite 0 or 1
         """
         if self.is_opened == 0:
-            print('Error in ucsfTool:write_planes()- file is not opened')
+            print_log('Error in ucsfTool:write_planes()- file is not opened')
             return None
 
         if dim < 0 or dim > self.ndim:
-            print('Error in ucsfTool:write_planes()- incorrect dimension')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_planes()- incorrect dimension')
+            print_log(use_logo)
             return 0
 
         # set header
@@ -1480,8 +1491,8 @@ class ucsfTool:
         if file_header['DimCount'] < 3:
             msg = 'Error in ucsfTool:write_planes()- current ucsf dimension '
             msg = msg + 'must be 3 or 4'
-            print(msg)
-            print(use_logo)
+            print_log(msg)
+            print_log(use_logo)
             return 0
         file_header['DimCount'] = file_header['DimCount'] - 1
 
@@ -1559,8 +1570,8 @@ class ucsfTool:
                 else:
                     out_files.append('%s_%.3f.ucsf' % (out_prefix, tp))
             if overwrite == 0 and os.path.exists(out_files[-1]):
-                print('Error in ucsfTool:write_planes()- output file already exists')
-                print(use_logo)
+                print_log('Error in ucsfTool:write_planes()- output file already exists')
+                print_log(use_logo)
                 return 0
 
         for i in range(len(out_files)):
@@ -1618,17 +1629,17 @@ class ucsfTool:
         """
 
         if self.is_opened == 0:
-            print('Error in ucsfTool:write_swapped_axis()- file is not opened')
+            print_log('Error in ucsfTool:write_swapped_axis()- file is not opened')
             return None
 
         if dim1 < 1 or dim1 > len(self.axis_header_list) or dim2 < 1 or dim2 > len(self.axis_header_list) or dim1 == dim2:
-            print('Error in ucsfTool:write_swapped_axis()- incorrect dimension')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_swapped_axis()- incorrect dimension')
+            print_log(use_logo)
             return 0
 
         if overwrite == 0 and os.path.exists(out_filename):
-            print('Error in ucsfTool:write_swapped_axis()- output file already exists')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_swapped_axis()- output file already exists')
+            print_log(use_logo)
             return 0
 
         # set header
@@ -1705,22 +1716,22 @@ class ucsfTool:
         """
 
         if self.is_opened == 0:
-            print('Error in ucsfTool:write_shifted()- file is not opened')
+            print_log('Error in ucsfTool:write_shifted()- file is not opened')
             return None
 
         if shift_dim < 1 or shift_dim > len(self.axis_header_list):
-            print('Error in ucsfTool:write_shifted()- incorrect dimension')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_shifted()- incorrect dimension')
+            print_log(use_logo)
             return 0
 
         if overwrite == 0 and os.path.exists(out_filename):
-            print('Error in ucsfTool:write_shifted()- output file already exists')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_shifted()- output file already exists')
+            print_log(use_logo)
             return 0
 
         if unit.lower() != 'ppm' and unit.lower() != 'hz' and unit.lower() != 'pt':
-            print('Error in ucsfTool:write_shifted()- incorrect unit')
-            print(use_logo)
+            print_log('Error in ucsfTool:write_shifted()- incorrect unit')
+            print_log(use_logo)
             return 0
 
         # set header
@@ -1794,31 +1805,31 @@ class ucsfTool:
 def auto_picking(in_filename, out_filename=None, grid_buffers=None,
                  noise_filter=8, sign=0, max_count=None,
                  threshold=None, nproc=2, verbose=False):
-    print("""
+    print_log("""
     Automated Peak Picking by ucsfTool
     by Woonghee Lee (whlee@nmrfam.wisc.edu)
 
     """)
-    print(datetime.datetime.now())
+    print_log(datetime.datetime.now())
     # Make 2D projections
     ut = ucsfTool()
     if out_filename is None:
         pre, _ = os.path.splitext(in_filename)
         out_filename = pre + '.list'
-    print('Picking peaks: ' + out_filename)
+    print_log('Picking peaks: ' + out_filename)
     ut.ucsf_open(in_filename, nproc=nproc)
     peaks, _ = ut.auto_pick_peaks(out_filename,
                                   grid_buffers=grid_buffers, noise_filter=noise_filter,
                                   sign=sign, max_count=max_count, threshold=threshold, verbose=verbose)
     ut.ucsf_close()
-    print('\t%d peaks picked.' % (len(peaks)))
-    print(datetime.datetime.now())
+    print_log('\t%d peaks picked.' % (len(peaks)))
+    print_log(datetime.datetime.now())
 
 
 def auto_picking_3D_proj_method(in_filename, out_filename=None,
                                 noise_filter=8, sign=0, max_count=None,
                                 threshold=None, nproc=1, verbose=False):
-    print(datetime.datetime.now())
+    print_log(datetime.datetime.now())
     # Set 2D projections
     proj_files = ['xy.ucsf', 'yz.ucsf', 'xz.ucsf']
     proj_dims = [3, 2, 1]
@@ -1829,7 +1840,7 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None,
     ut = ucsfTool()
     ut.ucsf_open(in_filename)
     for i in range(3):
-        print('Making projections: ' + proj_files[i])
+        print_log('Making projections: ' + proj_files[i])
         ut.write_projection(proj_files[0], proj_dims[i],
                             proj_mode='abs', overwrite=1)
     ut.ucsf_close()
@@ -1837,9 +1848,9 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None,
     # Pick peaks from 2D projections
     for i in range(3):
         ut.ucsf_open(proj_files[i], nproc=nproc)
-        print('Picking peaks: ' + proj_files[i])
+        print_log('Picking peaks: ' + proj_files[i])
         peaks, _ = ut.auto_pick_peaks(sign=1, write_peaks=False)
-        print('\t%d peaks found.' % (len(peaks)))
+        print_log('\t%d peaks found.' % (len(peaks)))
         for peak in peaks:
             restraints[peak_dims[i][0]].append(peak[0])
             restraints[peak_dims[i][1]].append(peak[1])
@@ -1848,7 +1859,7 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None,
     if out_filename is None:
         pre, _ = os.path.splitext(in_filename)
         out_filename = pre + '.list'
-    print('Picking peaks: ' + out_filename)
+    print_log('Picking peaks: ' + out_filename)
     ut.ucsf_open(in_filename, nproc=nproc)
     peaks, _ = ut.auto_pick_peaks(out_filename,
                                   shift_restraint=restraints,
@@ -1856,12 +1867,12 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None,
                                   max_count=max_count,
                                   threshold=threshold,
                                   sign=sign)
-    print('\t%d peaks picked.' % (len(peaks)))
+    print_log('\t%d peaks picked.' % (len(peaks)))
     ut.ucsf_close()
-    print(datetime.datetime.now())
+    print_log(datetime.datetime.now())
 
 
 if __name__ == "__main__":
-    print('List of available functions:')
+    print_log('List of available functions:')
     ut = ucsfTool()
     ut.help()
