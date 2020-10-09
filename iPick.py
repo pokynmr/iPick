@@ -127,6 +127,11 @@ def parse_args():
         default='ucsftool'
     )
     parg.add_argument(
+        '-S', '--sign', type=int,
+        help='Peak sign. Choose between 1, 0, and -1. \n0 means both positive and negative peaks.',
+        default=0
+    )
+    parg.add_argument(
         '-p', '--print_info',
         help='Print UCSF information.',
         action='store_true'
@@ -161,11 +166,6 @@ def main():
         sys.path.append(args.nmrglue)
     if args.ucsftool:
         sys.path.append(args.ucsftool)
-    
-    try:
-        import nmrglue as ng
-    except ImportError:
-        print_log('Importing NMRGLUE failed. Using UCSFtool instead.')
 
 
     if args.software == 'ucsftool':
@@ -184,7 +184,7 @@ def main():
 
     ndim = len(ut.axis_header_list)
     print_log('Using UCSFTOOL to sample noise level.')
- 
+
     noise = ut.sample_noise(100)
 
     if args.threshold:
@@ -205,13 +205,18 @@ def main():
         else:
             res = [args.res] * ndim
         print_log('Resolution setting: ', res[0])
-        grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=0, verbose=True)
+        peak_sign = int(args.sign)
+        grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
     else:
         print_log('Using NMRGLUE to detect local maxima.')
-        _, data = ng.sparky.read(in_filename)
-        grid_peaks = ng.analysis.peakpick.pick(data,
-                                               noiselevel,
-                                               nthres=-1*noiselevel)
+
+        grid_peaks = []
+        try:
+            import nmrglue as ng
+            _, data = ng.sparky.read(in_filename)
+            grid_peaks = ng.analysis.peakpick.pick(data, noiselevel, nthres=-1*noiselevel)
+        except ImportError:
+            print_log('Importing NMRGLUE failed. Using UCSFtool instead.')
 
     if args.number:
         peak_count = min(peak_count, len(grid_peaks))
