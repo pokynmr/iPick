@@ -17,13 +17,16 @@ import time
 import tkMessageBox
 import sys
 import os
+import copy
 
+LOG_PATH = '/tmp/'
 IPICK_PATH = '/home/samic/MyWorks/CODES/iPick/'
+
 sys.path.append(IPICK_PATH)
 try:
     import iPick
 except ImportError:
-    print('Could not fild iPick')
+    print('Could not find iPick')
 
 
 class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
@@ -32,24 +35,28 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #print(os.getcwd())
 
     # prepare temp files
-    if path.exists('/tmp/process.log'):
-        remove('/tmp/process.log')
+    if path.exists(LOG_PATH + 'process.log'):
+        remove(LOG_PATH + 'process.log')
 
     if path.exists('done'):
         remove('done')
 
-    open('/tmp/process.log', 'w').write('')
+    open(LOG_PATH + 'process.log', 'w').write('')
 
 
     self.session = session
-    self.resolution = 1
     self.basic_adv = 'basic'
+    # these will be updated later:
+    self.resolution = '1'
+    self.import_dist = 0.0
+    self.import_drop = 0.0
+
 
     tkutil.Dialog.__init__(self, session.tk, 'iPick')
 
 
     ipick_label = Tkinter.Label(self.top, text="Integrated UCSF Peak Picker v1", font=20)
-    ipick_label.pack(side='top', fill='both', expand=1, pady=30)
+    ipick_label.pack(side='top', fill='both', expand=1, pady=20)
 
 
 
@@ -72,7 +79,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     radio_label.pack(side='left', fill='both')
     self.basic_advanced = Tkinter.StringVar()
     self.basic_advanced.set('1')
-    radio_button1 = Tkinter.Radiobutton(radio_frame, text="Baisc ", highlightthickness = 0,
+    radio_button1 = Tkinter.Radiobutton(radio_frame, text="Basic ", highlightthickness = 0,
                                         variable=self.basic_advanced, value='1', command=self.basic_frame_show)
     radio_button1.pack(side='left')
 
@@ -97,7 +104,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     b_btmfrm.pack(side='bottom', fill='both', expand=1, padx=8)
 
 
-    self.b_tree = tkutil.scrolling_list(b_topfrm, 'Select the spectra for pick peaking:', 5, True)
+    self.b_tree = tkutil.scrolling_list(b_topfrm, 'Select the spectrum for pick peaking:', 5, True)
     self.b_tree.listbox['selectmode'] = 'single'
     #self.b_tree.listbox['xscrollcommand'] = None
     self.b_tree.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
@@ -192,7 +199,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     a_btmfrm.pack(side='bottom', fill='both', expand=1, padx=8)
 
 
-    self.a_tree = tkutil.scrolling_list(a_topfrm, 'Select the spectra for pick peaking:', 5, True)
+    self.a_tree = tkutil.scrolling_list(a_topfrm, 'Select the spectrum for pick peaking:', 5, True)
     self.a_tree.listbox['selectmode'] = 'single'
     #self.a_tree.listbox['xscrollcommand'] = None
     self.a_tree.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
@@ -217,11 +224,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     radio_cont = Tkinter.Radiobutton(a_midfrm_nois_cont, text="Contour Level", highlightthickness = 0,
                                         variable=self.nois_cont, value='2', command=self.noise_or_contour)
     radio_cont.pack(side='left')
-
-    radio_height = Tkinter.Radiobutton(a_midfrm_nois_cont, text="S/N Ratio", highlightthickness = 0,
-                                        variable=self.nois_cont, value='3', command=self.noise_or_contour)
-    radio_height.pack(side='left')
-
     radio_nois.select()
 
 
@@ -229,7 +231,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_noise_button = Tkinter.Button(a_midfrm, text='Find Noise Level', command=self.noise_level)
     self.a_noise_button.pack(side='left', padx=20)
 
-    self.a_noise = tkutil.entry_field(a_midfrm, 'Noise Level: ', width=15)
+    self.a_noise = tkutil.entry_field(a_midfrm, 'Noise Level: ', width=16)
     self.a_noise.entry.bind('<Return>', self.noise_level)
     self.a_noise.frame.pack(side='top', fill='x', expand=1)
 
@@ -238,26 +240,16 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_contour_button = Tkinter.Button(a_midfrm, text='Find Contour Level', command=self.contour_level)
     #self.a_contour_button.pack(side='left', padx=20)
 
-    self.a_contour = tkutil.entry_field(a_midfrm, 'Contour Level: ', width=13)
+    self.a_contour = tkutil.entry_field(a_midfrm, 'Contour Level: ', width=12)
     self.a_contour.entry.bind('<Return>', self.contour_level)
     #self.a_contour.frame.pack(side='top', fill='x', expand=1)
-
-
-
-    self.a_sn_button = Tkinter.Button(a_midfrm, text='Find S/N Ratio', command=self.sn_ratio)
-    #self.a_sn_button.pack(side='left', padx=20)
-
-    self.a_sn = tkutil.entry_field(a_midfrm, 'S/N Ratio: ', width=15)
-    self.a_sn.entry.bind('<Return>', self.sn_ratio)
-    #self.a_sn.frame.pack(side='top', fill='x', expand=1)
-
 
 
 
     pos_neg_label = Tkinter.Label(a_midfrm_pos_neg, text="Select:")
     pos_neg_label.pack(side='left', fill='both')
     self.pos_neg = Tkinter.StringVar()
-    self.pos_neg.set('1')
+    self.pos_neg.set('0')
 
     radio_pos = Tkinter.Radiobutton(a_midfrm_pos_neg, text="Positive peaks", highlightthickness = 0,
                                         variable=self.pos_neg, value='1')
@@ -269,19 +261,28 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     radio_both = Tkinter.Radiobutton(a_midfrm_pos_neg, text="Both", highlightthickness = 0,
                                         variable=self.pos_neg, value='0')
     radio_both.pack(side='left')
-    radio_pos.select()
+    radio_both.select()
 
 
 
-    self.a_res = tkutil.entry_field(a_midfrm_res, 'Resolution: ', width=10, initial='1')
+    self.a_res = tkutil.entry_field(a_midfrm_res, 'Resolution: ', width=3, initial='1')
     self.a_res.entry.bind('<Return>', self.set_resolution)
-    self.a_res.frame.pack(side='top', fill='x', expand=1)
+    self.a_res.frame.pack(side='left', fill='x', expand=1)
+
+
+    self.a_import_dis = tkutil.entry_field(a_midfrm_res, 'Import Dist.: ', width=3, initial='.1')
+    self.a_import_dis.entry.bind('<Return>', self.set_import_dist)
+    self.a_import_dis.frame.pack(side='left')
+
+    self.a_import_drop = tkutil.entry_field(a_midfrm_res, 'Drop: ', width=3, initial='.01')
+    self.a_import_drop.entry.bind('<Return>', self.set_import_drop)
+    self.a_import_drop.frame.pack(side='left', padx=(2,10))
 
 
 
     a_ipick_button = Tkinter.Button(a_btmfrm, text='Run iPick', font=('bold'),
                                   height=1, width=10, command=self.run_ipick)
-    a_ipick_button.pack(side='top', pady=20)
+    a_ipick_button.pack(side='top', pady=18)
 
 
 
@@ -360,8 +361,20 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
+  def set_import_dist(self, *args):
+      self.import_dist = float(self.a_import_dis.variable.get())
+
+
+
+  def set_import_drop(self, *args):
+      self.import_drop = float(self.a_import_drop.variable.get())
+
+
+
   def update_tree(self):
-    if self.session.project == None: return
+    if self.session.project == None:
+        tkMessageBox.showinfo(title='Error', message='No spectrum is loaded!')
+        return
 
     self.b_tree.clear()
     self.a_tree.clear()
@@ -380,17 +393,23 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if (self.basic_adv == 'basic'):
         widget = self.b_status
         data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         widget = self.a_status
         data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.a_tree.selected_line_numbers()[0]
-    widget.config(text="Status: Spectra selected. Check noise level!")
+    widget.config(text="Status: Spectrum selected. Check noise level!")
     widget.update()
 
-    if idx == None: return
+    if idx == None:
+        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        return
 
     # print(self.spec_list[idx].data_path)
 
@@ -409,15 +428,22 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if (self.basic_adv == 'basic'):
         widget = self.b_status
         data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         widget = self.a_status
         data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.a_tree.selected_line_numbers()[0]
 
-    if idx == None: return
+    if idx == None:
+        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        return
+
     widget.config(text="Status: Noise level found. Now run iPick!")
     widget.update()
 
@@ -447,12 +473,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
-#TODO how to find the s/n before running ipick?!
-  def sn_ratio(self):
-    pass
-
-
-
   def import_check(self, *args):
     if (self.basic_adv == 'basic'):
         if self.b_check_import.get() :
@@ -467,6 +487,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             self.a_import_button.pack(side='left', padx=15)
 
 
+
   def noise_or_contour(self, *args):
     if (self.nois_cont.get() == '1'):
 
@@ -476,10 +497,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.a_contour_button.pack_forget()
         self.a_contour.frame.pack_forget()
 
-        self.a_sn_button.pack_forget()
-        self.a_sn.frame.pack_forget()
-
-
     elif (self.nois_cont.get() == '2'):
 
         self.a_noise_button.pack_forget()
@@ -488,27 +505,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.a_contour_button.pack(side='left', padx=20)
         self.a_contour.frame.pack(side='top', fill='x', expand=1)
 
-        self.a_sn_button.pack_forget()
-        self.a_sn.frame.pack_forget()
-
-    else:
-
-        self.a_noise_button.pack_forget()
-        self.a_noise.frame.pack_forget()
-
-        self.a_contour_button.pack_forget()
-        self.a_contour.frame.pack_forget()
-
-        self.a_sn_button.pack(side='left', padx=20)
-        self.a_sn.frame.pack(side='top', fill='x', expand=1)
-
-
-
 
 
   def ipick_process(self, UCSF_FILE):
-    #Popen("python /home/samic/MyWorks/CODES/iPick/iPick.py -i " + UCSF_FILE + " -o peaks.list > process.log && touch done")
-
     cmd = ("python " + IPICK_PATH +
             "/iPick.py -i " + UCSF_FILE +
             " -o peaks.list -r " + self.resolution +
@@ -517,28 +516,30 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     proc = subprocess.Popen([cmd], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
 
-    #cmd = "python /home/samic/Desktop/test.py > process.log && touch done"
-    #system(cmd)
-
-
 
 
   def run_ipick(self):
 
     if (self.basic_adv == 'basic'):
         data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.b_tree.selected_line_numbers()[0]
         widget = self.b_status
     else:
         data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.a_tree.selected_line_numbers()[0]
         widget = self.a_status
     widget.config(text="Status: iPick is running ...")
     widget.update()
 
-    if idx == None: return
+    if idx == None:
+        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        return
 
     self.set_resolution()
 
@@ -553,7 +554,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
         while True:
-            log = open('/tmp/process.log', 'r')
+            log = open(LOG_PATH + 'process.log', 'r')
 
 
             if (self.basic_adv == 'basic'):
@@ -593,7 +594,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         print(sys.exc_type)
 
     else:
-        log = open('/tmp/process.log', 'r')
+        log = open(LOG_PATH + 'process.log', 'r')
 
         if (self.basic_adv == 'basic'):
             widget = self.b_output
@@ -627,41 +628,128 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
+  def distance(self, p1, p2):
+    sum_sq = 0
+    for i in range(len(p1)):
+        sum_sq += (p1[i] - p2[i]) ** 2
+    return sum_sq ** 0.5
+
+
+
+  def mid_point(self, p1, p2):
+    midpoint = []
+    for i in range(len(p1)):
+        midpoint.append((p1[i] + p2[i]) / 2)
+    return tuple(midpoint)
+
+
 
   def place_peaks(self):
     peaks = open('peaks.list', 'r').readlines()
-    if len(peaks) < 4: return
+    if len(peaks) < 4:
+        tkMessageBox.showinfo(title='Error', message='Peak list file is empty!')
+        return
 
 
     if (self.basic_adv == 'basic'):
         data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1: return
+        if len(data_list) < 1:
+            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            return
         idx = self.a_tree.selected_line_numbers()[0]
 
-    if idx == None: return
+    if idx == None:
+        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        return
 
     spec = self.spec_list[idx]
-    #spec = self.session.selected_spectrum()
+    #spec = s.selected_spectrum()
+
+    self.set_import_dist()
+    self.set_import_drop()
+
+    spec_peaks = copy.deepcopy(spec.peak_list())
+    #print spec_peaks[1].frequency[0]
+
+    print('\n\nCurrent peaks in the spectra: ' + str(len(spec_peaks)))
+    print('New peaks to be processed: ' + str(len(peaks)-2) + '\n')
+
+    #exis_peaks = []
+    #for p in spec_peaks:
+    #    exis_peaks.append(p.frequency)
+    #exis_peaks.sort()
 
 
-#TODO check if a peak exists in the area
-    print spec.peak_list()
+# Check if the new peak already exist on the spectrum
+
+    #TODO: make this comparison faster
+
+    placed_peaks = 0
 
     for i in range(2, len(peaks)):
-        peak = peaks[i].split()
-        if spec.dimension == 2:
-            spec.place_peak((float(peak[1]), float(peak[2])))
-        elif spec.dimension == 3:
-            spec.place_peak((float(peak[1]), float(peak[2]), float(peak[3])))
-        elif spec.dimension == 4:
-            spec.place_peak((float(peak[1]), float(peak[2]), float(peak[3]), float(peak[4])))
+        new_peak = peaks[i].split()[1:-1]   # also removes the first and last columns from the peak list file
+        new_peak = tuple(float(e) for e in new_peak)
+        new_peak_flag = True
 
+        if spec_peaks == []:
+            spec.place_peak(new_peak)
+            continue
+
+        print('\nNew peak #' + str(i-1) + ' from ' + str(len(peaks)-2))
+
+        k = 1
+        for exis_peak in spec_peaks:
+            print('Comparing with peak #' + str(k) + ' from ' + str(len(spec_peaks)))
+            k += 1
+
+            #print exis_peak.frequency[0]
+            #print new_peak[0]
+            #print self.import_dist
+            #print self.distance(exis_peak.frequency, new_peak)
+
+            # this is a pre-condition to make the loop faster
+            if ((exis_peak.frequency[0] - new_peak[0]) < self.import_dist * 2):
+
+                if (self.distance(exis_peak.frequency, new_peak) < self.import_dist):
+                    print('The new peak is too close to this already existing peak:')
+                    print(exis_peak.frequency)
+
+                    #print spec.data_height((117.6,5.2,8.13))
+                    midpoint_height = spec.data_height(self.mid_point(exis_peak.frequency, new_peak))
+
+                    new_peak_height = spec.data_height(new_peak)
+                    exis_peak_height = spec.data_height(exis_peak.frequency)
+
+                    #print new_peak_height
+                    #print exis_peak_height
+                    #print midpoint_height
+
+                    if (((new_peak_height - midpoint_height) < self.import_drop) or \
+                       ((exis_peak_height - midpoint_height) < self.import_drop)):
+                            print('No drop between the peaks. Skipping importing this peak.')
+                            new_peak_flag = False
+                            break
+
+
+        if new_peak_flag:
+            print('This is a new peak. Importing this peak.')
+            spec.place_peak(new_peak)
+            placed_peaks += 1
+
+
+        #if spec.dimension == 2:
+        #    spec.place_peak(new_peak)
+
+
+    print('\nImport Completed! ' + str(placed_peaks) + ' new peaks are placed on the spectrum.')
     self.session.command_characters('lt')
-    tkMessageBox.showinfo(title='Import Completed!', message='Found peaks are placed on the spectrum.')
+    tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
 
 
 
