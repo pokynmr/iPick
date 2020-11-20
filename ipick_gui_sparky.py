@@ -37,6 +37,8 @@ except ImportError:
     print('Could not find iPick to import')
 
 
+manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs = [[]] * 6
+
 class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def __init__(self, session):
 
@@ -247,14 +249,15 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.nois_cont = tk.StringVar()
     self.nois_cont.set('1')
 
+    radio_cont = tk.Radiobutton(a_midfrm_nois_cont, text="Contour Level", highlightthickness = 0,
+                                        variable=self.nois_cont, value='2', command=self.noise_or_contour)
+    radio_cont.pack(side='left')
+
     radio_nois = tk.Radiobutton(a_midfrm_nois_cont, text="Noise Level", highlightthickness = 0,
                                         variable=self.nois_cont, value='1', command=self.noise_or_contour)
     radio_nois.pack(side='left')
 
-    radio_cont = tk.Radiobutton(a_midfrm_nois_cont, text="Contour Level", highlightthickness = 0,
-                                        variable=self.nois_cont, value='2', command=self.noise_or_contour)
-    radio_cont.pack(side='left')
-    radio_nois.select()
+    radio_cont.select()
     tkutil.create_hint(radio_nois, 'Use Noise level as the criteria for peak picking')
     tkutil.create_hint(radio_cont, 'Use Contour level as the criteria for peak picking')
 
@@ -267,21 +270,21 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     self.a_noise_button = tk.Button(a_midfrm, text='Find Noise Level', command=self.noise_level)
-    self.a_noise_button.pack(side='left', padx=20)
+    #self.a_noise_button.pack(side='left', padx=20)
 
     self.a_noise = tkutil.entry_field(a_midfrm, 'Noise Level: ', width=16)
     self.a_noise.entry.bind('<Return>', self.noise_level)
-    self.a_noise.frame.pack(side='top', fill='x', expand=1)
+    #self.a_noise.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_noise_button, 'Get the automatic noise level selection')
     tkutil.create_hint(self.a_noise.frame, 'The automatic noise level is shown here. You can change it as you like.')
 
 
     self.a_contour_button = tk.Button(a_midfrm, text='Find Contour Level', command=self.contour_level)
-    #self.a_contour_button.pack(side='left', padx=20)
+    self.a_contour_button.pack(side='left', padx=20)
 
     self.a_contour = tkutil.entry_field(a_midfrm, 'Contour Level: ', width=12)
     self.a_contour.entry.bind('<Return>', self.contour_level)
-    #self.a_contour.frame.pack(side='top', fill='x', expand=1)
+    self.a_contour.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_contour_button, 'Get the automatic contour level selection')
     tkutil.create_hint(self.a_contour.frame, 'The automatic contour level is shown here. You can change it as you like.')
 
@@ -369,6 +372,26 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(a_checkbox_integration, 'Performs integration fitting on all peaks and opens a "Peak List" window so that you can examine them')
 
 
+
+    # integration_radio frame
+    a_integration_radio_frm = tk.Frame(a_btmfrm)
+    a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
+
+    integration_radio_label = tk.Label(a_integration_radio_frm, text="Auto Integration mode:")
+    integration_radio_label.pack(side='left', fill='both')
+    self.integration_radio = tk.StringVar()
+    self.integration_radio.set('1')
+    integration_radio_button1 = tk.Radiobutton(a_integration_radio_frm, text="fit function ", highlightthickness = 0,
+                                        variable=self.integration_radio, value='1')
+    integration_radio_button1.pack(side='left')
+
+    integration_radio_button2 = tk.Radiobutton(a_integration_radio_frm, text="pi command", highlightthickness = 0,
+                                        variable=self.integration_radio, value='2')
+    integration_radio_button2.pack(side='left')
+
+
+
+
     # separator
     #sep = tk.Frame(a_btmfrm, height=2, bd=1, relief="ridge")
     #sep.pack(fill="both", padx=5, pady=(5,12), side = 'top')
@@ -410,6 +433,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
+# ---------------------------------------------------------------------------
+# functions
+# ---------------------------------------------------------------------------
 
   def show_pick_list(self, *args):
       spectrum = self.session.selected_spectrum()
@@ -424,53 +450,48 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
       else:
         d = peak_list_dialog(self.session)
         d.show_window(1)
-        d.settings.show_fields('Assignment', 'Chemical Shift')
+        d.settings.show_fields('Assignment', 'Chemical Shift', 'Reliability Score')
         d.show_spectrum_peaks(spectrum)
         dialogs[spectrum] = d
 
 
-
-# functions
-
+# ---------------------------------------------------------------------------
   def get_view(self, spectrum):  # imported from APES
     for view in self.session.project.view_list():
       if view.spectrum == spectrum:
         return view
     return None
 
-
+# ---------------------------------------------------------------------------
   def basic_frame_show(self):
       self.adv_frame.pack_forget()
       self.basic_frame.pack(side='bottom', fill='both', expand=1)
       self.basic_adv = 'basic'
 
-
-
+# ---------------------------------------------------------------------------
   def adv_frame_show(self):
       self.basic_frame.pack_forget()
       self.adv_frame.pack(side='bottom', fill='both', expand=1)
       self.basic_adv = 'adv'
 
-
+# ---------------------------------------------------------------------------
   def integration_check(self, *args):
       self.auto_integration = self.a_check_integration.get()
 
-
+# ---------------------------------------------------------------------------
   def set_resolution(self, *args):
       self.resolution = self.a_res.variable.get()
 
-
-
+# ---------------------------------------------------------------------------
   def set_import_dist(self, *args):
       self.import_dist = float(self.a_import_dis.variable.get())
 
-
-
+# ---------------------------------------------------------------------------
   def set_import_drop(self, *args):
       self.import_drop = float(self.a_import_drop.variable.get())
 
 
-
+# ---------------------------------------------------------------------------
   def update_tree(self):
     if self.session.project == None:
         tkMessageBox.showinfo(title='Error', message='No spectrum is loaded!')
@@ -487,7 +508,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.a_tree.append(spec.name)
 
 
-
+# ---------------------------------------------------------------------------
   def spectra_selected(self, *args):
 
     if (self.basic_adv == 'basic'):
@@ -504,7 +525,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
-    widget.config(text="Status: Spectrum selected. Check noise level!")
+    widget.config(text="Status: Spectrum selected. Check the contour level!")
     widget.update()
 
     if idx == None:
@@ -522,8 +543,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             self.neg_contour = v.negative_levels.lowest
             break
 
+    self.a_contour.variable.set('')
+    self.a_noise.variable.set('')
 
 
+# ---------------------------------------------------------------------------
   def noise_level(self):
     if (self.basic_adv == 'basic'):
         widget = self.b_status
@@ -552,15 +576,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #reload(iPick)
     self.noise = iPick.get_noise_level(UCSF_FILE)
 
-    if (self.basic_adv == 'basic'):
-        self.b_noise.variable.set(self.noise)
-    else:
-        self.a_noise.variable.set(self.noise)
+    self.a_noise.variable.set(self.noise)
 
     #print(self.a_noise.variable.get())
 
 
-
+# ---------------------------------------------------------------------------
   def contour_level(self):
     if (self.pos_neg.get() == '1'):
         self.a_contour.variable.set(self.pos_contour)
@@ -587,7 +608,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             self.a_import_button.pack(side='left', padx=(60,0), pady=0)
 
 
-
+# ---------------------------------------------------------------------------
   def noise_or_contour(self, *args):
     if (self.nois_cont.get() == '1'):
 
@@ -606,7 +627,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.a_contour.frame.pack(side='top', fill='x', expand=1)
 
 
-
+# ---------------------------------------------------------------------------
   def ipick_process(self, UCSF_FILE):
     cmd = ("python " + IPICK_PATH +
             "/iPick.py -i " + UCSF_FILE +
@@ -614,10 +635,30 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             " --sign " + self.pos_neg.get() +
             " --overwrite && touch done")
 
+
+    if (self.nois_cont.get() == '1'):
+        # using noise level
+        cmd = ("python " + IPICK_PATH +
+                "/iPick.py -i " + UCSF_FILE +
+                " -o peaks.list -r " + self.resolution +
+                " --sign " + self.pos_neg.get() +
+                " --threshold " + self.a_noise.variable.get() +
+                " --overwrite && touch done")
+
+
+    elif (self.nois_cont.get() == '2'):
+        # using contour level
+        cmd = ("python " + IPICK_PATH +
+               "/iPick.py -i " + UCSF_FILE +
+               " -o peaks.list -r " + self.resolution +
+               " --threshold " + self.a_contour.variable.get() +
+               " --overwrite && touch done")
+
+
     proc = subprocess.Popen([cmd], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
 
 
-
+# ---------------------------------------------------------------------------
   def run_ipick(self):
 
     if (self.basic_adv == 'basic'):
@@ -643,7 +684,18 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.set_resolution()
 
+    if (self.nois_cont.get() == '1'):
+        # using the noise level
+        if self.a_noise.variable.get() == '':
+            self.noise_level()
+
+    elif (self.nois_cont.get() == '2'):
+        # using the contour level
+        if self.a_contour.variable.get() == '':
+            self.contour_level()
+
     UCSF_FILE = self.spec_list[idx].data_path
+
 
     try:
 
@@ -727,7 +779,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                 self.place_peaks()
 
 
-
+# ---------------------------------------------------------------------------
   def distance(self, p1, p2):
     sum_sq = 0
     for i in range(len(p1)):
@@ -735,7 +787,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     return sum_sq ** 0.5
 
 
-
+# ---------------------------------------------------------------------------
   def mid_point(self, p1, p2):
     midpoint = []
     for i in range(len(p1)):
@@ -743,7 +795,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     return tuple(midpoint)
 
 
-
+# ---------------------------------------------------------------------------
   def place_peaks(self):
     peaks = open('peaks.list', 'r').readlines()
     if len(peaks) < 4:
@@ -846,8 +898,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             print('This is a new peak. Importing this peak.')
             pk = spec.place_peak(new_peak)
             placed_peaks += 1
+
             if self.auto_integration:
-                pk.fit(view)
+                if self.integration_radio.get() == '1':
+                    pk.fit(view)
+                else:
+                    pk.selected = 1
+                    self.session.command_characters("pi")
 
 
         #if spec.dimension == 2:
@@ -855,8 +912,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     print('\nImport Completed! ' + str(placed_peaks) + ' new peaks are placed on the spectrum.')
-    self.session.command_characters('lt')
     tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
+
+    #self.session.command_characters('lt')
+    self.show_pick_list()    # show our peak list instead of the default one
 
 
 
@@ -888,20 +947,24 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     br = tkutil.button_row(self.top,
 			   ('Update', self.update_cb),
-			   ('Sort by Reliability Score', self.sort_rs),
-			   ('Sort by height', self.sort_cb),
 			   ('Setup...', self.setup_cb),
+			   ('Sort by height', self.sort_cb),
 			   ('Save...', self.peak_list.save_cb),
 			   ('Stop', self.stop_cb),
 			   ('Close', self.close_cb),
                ('Help', sputil.help_cb(session, 'PeakListPython')),
 			   )
+    br2 = tkutil.button_row(self.top,
+			   ('Sort by Reliability Score', self.sort_rs),
+			   ('Remove peaks with Reliability Score of 0', self.remove_rs0),
+			   )
     br.frame.pack(side = 'top', anchor = 'w')
+    br2.frame.pack(side = 'top', anchor = 'w')
 
     keypress_cb = pyutil.precompose(sputil.command_keypress_cb, session)
     pl.listbox.bind('<KeyPress>', keypress_cb)
 
-    tkutil.Stoppable.__init__(self, progress_label, br.buttons[4])
+    tkutil.Stoppable.__init__(self, progress_label, br.buttons[5])
 
   # ---------------------------------------------------------------------------
   #
@@ -943,6 +1006,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
   # ---------------------------------------------------------------------------
   #
+  def remove_rs0(self):
+
+    self.stoppable_call(self.remove_peaks_rs0)
+
+  # ---------------------------------------------------------------------------
+  #
   def setup_cb(self):
 
     psd = sputil.the_dialog(peak_list_settings_dialog, self.session)
@@ -981,9 +1050,9 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.peak_list.clear()
     self.stoppable_loop('peaks', 50)
-    for peak in peaks:
+    for rank, peak in enumerate(peaks):
       self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak), peak)
+      self.peak_list.append(self.peak_line(peak, rank), peak)
 
   # ---------------------------------------------------------------------------
   #
@@ -1020,9 +1089,9 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.peak_list.clear()
 
     self.stoppable_loop('peaks', 50)
-    for peak in peaks:
+    for rank, peak in enumerate(peaks):
       self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak), peak)
+      self.peak_list.append(self.peak_line(peak, rank), peak)
 
   # ---------------------------------------------------------------------------
   #
@@ -1059,9 +1128,29 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.peak_list.clear()
 
     self.stoppable_loop('peaks', 50)
-    for peak in peaks:
+    for rank, peak in enumerate(peaks):
       self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak), peak)
+      self.peak_list.append(self.peak_line(peak, rank), peak)
+
+  # ---------------------------------------------------------------------------
+  #
+  def remove_peaks_rs0(self):
+    if self.spectrum:
+      peaks = self.spectrum.peak_list()
+    else:
+      peaks = self.peaks
+
+    data = []
+    for peak in peaks:
+        if peak.is_assigned == 1:
+        # we won't delete a peak that the user has assigned
+            continue
+
+        if reliability_score(peak) == 0:
+            peak.selected = 1
+            self.session.command_characters("")
+
+    self.sort_reliability()
 
   # ---------------------------------------------------------------------------
   #
@@ -1073,12 +1162,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
   # ---------------------------------------------------------------------------
   #
-  def peak_line(self, peak):
+  def peak_line(self, peak, rank):
 
-    line = ''
+    line = str(rank + 1)  #default is ''
     for field in self.settings.fields:
       if field.onoff:
-	line = line + field.string(peak)
+	    line = line + field.string(peak)
     return line
 
   # ---------------------------------------------------------------------------
@@ -1088,7 +1177,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     heading = ''
     for field in self.settings.fields:
       if field.onoff:
-	heading = heading + field.heading(dim)
+	    heading = heading + field.heading(dim)
     return heading
 
 
@@ -1161,13 +1250,44 @@ class peak_list_field:
 def reliability_score(peak):
     if peak.line_width == None:
         return 0
+
+    global manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs
+
+    volume = peak.volume
+    SNR = sputil.peak_height(peak) / peak.spectrum.noise
     linewidth = sum(pyutil.seq_product(peak.line_width, peak.spectrum.hz_per_ppm))
-    SNR = abs(sputil.peak_height(peak) / peak.spectrum.noise)
-    RS = (peak.volume / 1e5) + (SNR * 3) + (linewidth * 0.3)
+
+    volume_coeff = 1e5
+    SNR_coeff = 3
+    linewidth_coeff = 0.3
+
+    try:
+        if manual_coeff.get():
+            volume_coeff = float(coeff1.variable.get())
+            SNR_coeff = float(coeff2.variable.get())
+            linewidth_coeff = float(coeff3.variable.get())
+
+            if SNR_abs.get():
+                SNR = abs(SNR)
+
+            if volume_abs.get():
+                volume = abs(volume)
+
+    except:
+        pass
+
+    RS = (volume / volume_coeff) + (SNR * SNR_coeff) + (linewidth * linewidth_coeff)
     return RS
 
-
 field_classes = []
+
+# ---------------------------------------------------------------------------
+#
+#class rank_field(peak_list_field):
+#  name = 'Rank'
+#  def size(self, dim): return 5
+#  def text(self, peak): return 1
+#field_classes.append(rank_field)
 
 # ---------------------------------------------------------------------------
 #
@@ -1289,23 +1409,37 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
     opt = tk.Frame(self.top, borderwidth = 3, relief = 'groove')
     opt.pack(side = 'top', fill = 'x')
 
+    global manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs
 
-    self.manual_coeff = tk.BooleanVar()
-    self.manual_coeff.set(False)
+    manual_coeff = tk.BooleanVar()
+    manual_coeff.set(False)
     checkbox_coeff = tk.Checkbutton(opt, highlightthickness=0, text='Manual Coefficients',
-                                            variable=self.manual_coeff, command=self.show_coeff_settings)
+                                    variable=manual_coeff, command=self.show_coeff_settings)
     checkbox_coeff.pack(side='top', anchor='w')
     tkutil.create_hint(checkbox_coeff, 'Manually specify the coefficients for the Reliability Score formula')
 
 
-    self.coeff1 = tkutil.entry_field(opt, 'Volume Coeff.: ', width=5, initial='1')
-    tkutil.create_hint(self.coeff1.frame, 'Specify the coefficient for the Volume in the Reliability Score formula')
+    coeff1 = tkutil.entry_field(opt, 'Volume Coeff.: ', width=5, initial='1e5')
+    tkutil.create_hint(coeff1.frame, 'Specify the coefficient for the Volume in the Reliability Score formula')
 
-    self.coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='1')
-    tkutil.create_hint(self.coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio in the Reliability Score formula')
+    coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='3')
+    tkutil.create_hint(coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio in the Reliability Score formula')
 
-    self.coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='1')
-    tkutil.create_hint(self.coeff3.frame, 'Specify the coefficient for the Linewidth in the Reliability Score formula')
+
+    coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='0.3')
+    tkutil.create_hint(coeff3.frame, 'Specify the coefficient for the Linewidth in the Reliability Score formula')
+
+    SNR_abs = tk.BooleanVar()
+    SNR_abs.set(True)
+    self.checkbox_SNR_abs = tk.Checkbutton(opt, highlightthickness=0, text='Absolute SNR',
+                                           variable=SNR_abs)
+    tkutil.create_hint(self.checkbox_SNR_abs, 'If checked, the Reliability Score will only have absolute values for SNR')
+
+    volume_abs = tk.BooleanVar()
+    volume_abs.set(False)
+    self.checkbox_volume_abs = tk.Checkbutton(opt, highlightthickness=0, text='Absolute Volume',
+                                              variable=volume_abs)
+    tkutil.create_hint(self.checkbox_volume_abs, 'If checked, the Reliability Score will only have absolute values for Volume')
 
 
     br = tkutil.button_row(self.top,
@@ -1319,14 +1453,18 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
   # ---------------------------------------------------------------------------
   #
   def show_coeff_settings(self):
-    if self.manual_coeff.get():
-        self.coeff1.frame.pack(side='bottom', anchor = 'w')
-        self.coeff2.frame.pack(side='bottom', anchor = 'w')
-        self.coeff3.frame.pack(side='bottom', anchor = 'w')
+    if manual_coeff.get():
+        coeff1.frame.pack(side='top', anchor = 'w')
+        coeff2.frame.pack(side='top', anchor = 'w')
+        coeff3.frame.pack(side='top', anchor = 'w')
+        self.checkbox_SNR_abs.pack(side='bottom', anchor='w')
+        self.checkbox_volume_abs.pack(side='bottom', anchor='w')
     else:
-        self.coeff1.frame.pack_forget()
-        self.coeff2.frame.pack_forget()
-        self.coeff3.frame.pack_forget()
+        coeff1.frame.pack_forget()
+        coeff2.frame.pack_forget()
+        coeff3.frame.pack_forget()
+        self.checkbox_SNR_abs.pack_forget()
+        self.checkbox_volume_abs.pack_forget()
 
 
   # ---------------------------------------------------------------------------

@@ -23,12 +23,20 @@ import tkutil
 from itertools import combinations
 import collections
 
+#from matplotlib import use as matplotlib_use
+#matplotlib_use('TkAgg')
+#import matplotlib.pyplot as plt
+from matplotlib.pyplot import subplots, subplots_adjust
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+
 
 class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
   def __init__(self, session):
 
+    self.specs_peaks = []
+
     self.session = session
-    tkutil.Dialog.__init__(self, session.tk, 'X-Check Validation Filtering')
+    tkutil.Dialog.__init__(self, session.tk, 'Resonance Cross-validation')
 
    # xcheck_label = tk.Label(self.top, text="X-Check Validation Filtering Module", font=20)
    # xcheck_label.pack(side='top', fill='both', expand=1, pady=15)
@@ -54,19 +62,21 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 #spectra list
 
-    self.spectra_list = tkutil.scrolling_list(topfrm, 'Select the spectra for x-checking:', 5, True)
+    self.spectra_list = tkutil.scrolling_list(topfrm, 'Select the spectra for cross-validation:', 5, True)
     self.spectra_list.listbox['selectmode'] = 'extended'
     self.spectra_list.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
     self.spectra_list.frame.pack(side='top', fill='both', expand=1, pady=(5,5))
-
+    tkutil.create_hint(self.spectra_list.frame, 'You can select multiple experiments by holding down the Ctrl key and clicking on the experiments')
 
 # buttons
 
     update_button = tk.Button(midfrm, text='Update List', command=self.update_list)
     update_button.pack(side='left', anchor='w', expand=0, pady=(0, 15))
+    tkutil.create_hint(update_button, 'This will refresh the list in case a new experiment is loaded')
 
     select_all_button = tk.Button(midfrm, text='Select All', command=self.select_all)
     select_all_button.pack(side='left', anchor='w', expand=0, pady=(0, 15), padx=5)
+    tkutil.create_hint(select_all_button, 'This will select all the loaded experiments for the cross validation')
 
 
 # tolerance frame
@@ -74,22 +84,22 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     tolerance_font = tkFont.Font(size=11)
     tolerance_label = tk.Label(btmfrm, text="Tolerances:", font=tolerance_font)
     tolerance_label.pack(side='top', anchor='w')
-    #tkutil.create_hint(tolerance_label, 'These ')
+    tkutil.create_hint(tolerance_label, 'These tolerances are used in comparing peaks from different experiments')
 
     tol_frm = tk.Frame(btmfrm)
     tol_frm.pack(side='top', fill='both', expand=1)
 
-    self.tol_H = tkutil.entry_field(tol_frm, '1H: ', width=5, initial='0.1')
+    self.tol_H = tkutil.entry_field(tol_frm, '1H: ', width=5, initial='0.05')
     self.tol_H.frame.pack(side='left', padx=(20,10))
-    #tkutil.create_hint(self.tol_H.frame, 'Maximum ')
+    tkutil.create_hint(self.tol_H.frame, 'Maximum distance for H to be considered the same resonance')
 
-    self.tol_C = tkutil.entry_field(tol_frm, '13C:', width=5, initial='0.1')
+    self.tol_C = tkutil.entry_field(tol_frm, '13C:', width=5, initial='0.35')
     self.tol_C.frame.pack(side='left', padx=(5,10))
-    #tkutil.create_hint(self.tol_C.frame, 'Maximum ')
+    tkutil.create_hint(self.tol_C.frame, 'Maximum distance for C to be considered the same resonance')
 
-    self.tol_N = tkutil.entry_field(tol_frm, '15N:', width=5, initial='0.1')
+    self.tol_N = tkutil.entry_field(tol_frm, '15N:', width=5, initial='0.3')
     self.tol_N.frame.pack(side='left', padx=(5,10))
-    #tkutil.create_hint(self.tol_N.frame, 'Maximum ')
+    tkutil.create_hint(self.tol_N.frame, 'Maximum distance for N to be considered the same resonance')
 
 
 # exclude frame
@@ -97,7 +107,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     exclude_font = tkFont.Font(size=11)
     exclude_label = tk.Label(btmfrm, text="Exclude Range:", font=tolerance_font)
     exclude_label.pack(side='top', anchor='w', pady=(15,0))
-    #tkutil.create_hint(exclude_label, 'These ')
+    tkutil.create_hint(exclude_label, 'Any peak with their H resonance in this range will be excluded from the cross validation')
 
 
     exclude_frm = tk.Frame(btmfrm)
@@ -106,12 +116,12 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.exclude_from = tkutil.entry_field(exclude_frm, 'From: ', width=5, initial='4.7')
     self.exclude_from.frame.pack(side='left', padx=(25,0))
-    #tkutil.create_hint(self.exclude_from.frame, 'Maximum ')
+    tkutil.create_hint(self.exclude_from.frame, 'Lower bound for the exclusion range. Any peak with their H resonance in this range will be excluded from the cross validation')
 
 
     self.exclude_to = tkutil.entry_field(exclude_frm, 'To: ', width=5, initial='4.9')
     self.exclude_to.frame.pack(side='left', padx=(5,10))
-    #tkutil.create_hint(self.exclude_to.frame, 'Maximum ')
+    tkutil.create_hint(self.exclude_to.frame, 'Upper bound for the exclusion range. Any peak with their H resonance in this range will be excluded from the cross validation')
 
 
 # checkbox
@@ -129,10 +139,20 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # run button & status
 
-    xcheck_button = tk.Button(btmfrm, text='Run X-Checking', font=('bold'),
+    xcheck_button = tk.Button(btmfrm, text='Run Cross-validation', font=('bold'),
                                   height=1, command=self.run_xcheck)
-    xcheck_button.pack(side='top', pady=30)
+    xcheck_button.pack(side='top', pady=(30,5))
+    tkutil.create_hint(xcheck_button, 'Runs the cross validation using the settings above')
 
+    hist_button = tk.Button(btmfrm, text='Peak Histogram', font=('bold'),
+                                  height=1, command=self.run_histogram)
+    hist_button.pack(side='top', pady=(10,5))
+    tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances. The above settings do NOT effect this')
+
+    delete_button = tk.Button(btmfrm, text='Remove Noise Peaks', font=('bold'),
+                                  height=1, command=self.remove_peaks)
+    delete_button.pack(side='top', pady=(10,30))
+    tkutil.create_hint(delete_button, 'Removes the peaks that have no corresponding peaks in other experiments. You need to run the cross validation first.')
 
     self.status = tk.Label(btmfrm, text="Status: Ready!")
     self.status.pack(side='top', anchor='w', pady=5)
@@ -152,8 +172,9 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.update_list()
 
 
-
+# ---------------------------------------------------------------------------
 # functions
+# ---------------------------------------------------------------------------
 
   def select_all(self):
     self.spectra_list.listbox.select_set(0, tk.END)
@@ -163,7 +184,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.status.update()
 
 
-
+# ---------------------------------------------------------------------------
   def update_list(self):
     if self.session.project == None:
         tkMessageBox.showinfo(title='Error', message='No spectrum is loaded!')
@@ -178,6 +199,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.spectra_list.append(spec.name)
 
 
+# ---------------------------------------------------------------------------
   def spectra_selected(self, *args):
 
     data_list = self.spectra_list.selected_line_data()
@@ -196,12 +218,14 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.specs_names = []
     self.specs_peaks = []
     self.specs_nuclei = []
+
     for spec_id in selected_spec_ids:
         self.specs_peaks.append(self.spec_list[spec_id].peak_list())
         self.specs_nuclei.append(self.spec_list[spec_id].nuclei)
         self.specs_names.append(self.spec_list[spec_id].name)
 
 
+# ---------------------------------------------------------------------------
   def run_xcheck(self, *args):
 
     self.status.config(text="Status: Running ...")
@@ -214,6 +238,12 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     combinations_list = list(combinations(range(num_of_specs), 2))
     # list(combinations(range(3), 2))  -- >  [(0, 1), (0, 2), (1, 2)]
     # 8 spec is 28 combinations!
+
+
+    if num_of_specs == 1:
+        tkMessageBox.showinfo(title='Error!', message='You need to select at least two experiments to validate against each other')
+        return
+
 
     for spec in self.specs_peaks:
         for peak in spec:
@@ -250,7 +280,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
             #print 'Peak1 ' + str(i) + ': '
             #print(peak1.frequency)
 
-            if peak1.assignment.find('?') == -1:
+            #if peak1.assignment.find('?') == -1:
+            if peak1.is_assigned == 1:
                 continue    # skip if already assigned
 
             if ((peak1.frequency[-1] > exclude_from) and (peak1.frequency[-1] < exclude_to)):
@@ -262,7 +293,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                 #print 'Peak2 ' + str(j) + ': '
                 #print(peak2.frequency)
 
-                if peak2.assignment.find('?') == -1:
+                #if peak2.assignment.find('?') == -1:
+                if peak2.is_assigned == 1:
                     continue    # skip if already assigned
 
                 if ((peak2.frequency[-1] > exclude_from) and (peak2.frequency[-1] < exclude_to)):
@@ -313,6 +345,145 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkMessageBox.showinfo(title='Done!', message='Now check the Peak List (lt) for each experiment and see the Note property.')
 
 
+# ---------------------------------------------------------------------------
+  def run_histogram(self, *args):
+    self.status.config(text="Status: Running ...")
+    self.status.update()
+
+    if len(self.specs_peaks) == 0:
+        tkMessageBox.showinfo(title='Error!', message='You need to select at least one experiment to generate the histograms')
+        return
+
+    H_hist, N_hist, C_hist = {}, {}, {}
+
+    for spec in range(len(self.specs_peaks)):
+        #print(self.specs_nuclei[spec])
+
+        for nuclei in range(len(self.specs_nuclei[spec])):
+
+            if self.specs_nuclei[spec][nuclei] == '1H':
+                this_hist = H_hist
+            elif self.specs_nuclei[spec][nuclei] == '15N':
+                this_hist = N_hist
+            elif self.specs_nuclei[spec][nuclei] == '13C':
+                this_hist = C_hist
+
+
+            for peak in self.specs_peaks[spec]:
+                this_freq = int(peak.frequency[nuclei])
+
+                for bin in [this_freq-1, this_freq, this_freq+1]:
+                    if this_hist.has_key(bin):
+                        this_hist[bin] = this_hist[bin] + 1
+                    else:
+                        this_hist[bin] = 1
+
+
+    self.status.config(text="Status: Done!")
+    self.status.update()
+
+    d = hist_dialog(self.session)
+    d.show_window(1)
+    d.show_histograms(H_hist, N_hist, C_hist)
+
+
+# ---------------------------------------------------------------------------
+  def remove_peaks(self, *args):
+    for spec in self.specs_peaks:
+        for peak in spec:
+                if peak.is_assigned == 1:
+                # we won't delete a peak that the user has assigned
+                    continue
+
+                if peak.note.find('xcheck:0') == 0:
+                # index of 0 means this also won't delete a peak that the user has put notes on
+                    peak.selected = 1
+                    self.session.command_characters("")
+
+    tkMessageBox.showinfo(title='Done!', message='Peaks with zero corresponding peaks have been deleted')
+
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
+
+  def __init__(self, session):
+
+    self.session = session
+    tkutil.Dialog.__init__(self, session.tk, 'Peaks Histograms')
+
+    #progress_label = tk.Label(self.top, anchor = 'nw', text="Output progress:")
+    #progress_label.pack(side = 'top', anchor = 'w')
+
+    self.plot_frame = tk.Frame(self.top)
+    self.plot_frame.pack(side='top', fill='both', expand=1, padx=4, pady=(3,0))
+
+    hist_button = tk.Button(self.top, text='Show the selected peak', command=self.show_peak_in_hist)
+    hist_button.pack(side='top', pady=(0,15))
+    tkutil.create_hint(hist_button, 'Select one or more peaks in the experiment and click this button to show them on the histograms')
+
+
+  def show_histograms(self, H_hist, N_hist, C_hist):
+    print('\nH:')
+    print(H_hist)
+    print('\nN:')
+    print(N_hist)
+    print('\nC:')
+    print(C_hist)
+
+    self.fig, self.axes = subplots(figsize=(20, 5), nrows=1, ncols=3)
+    self.fig.set_facecolor("white")
+    subplots_adjust(left=0.04, bottom=0.08, right=0.98, top=0.90, wspace=0.14)
+
+
+    self.axes[0].bar(list(H_hist.keys()), H_hist.values(), color='#3dff3d')
+    self.axes[0].set_title ("H", fontsize=16)
+    #self.axes[0].set_ylabel("Y", fontsize=14)
+    #self.axes[0].set_xlabel("X", fontsize=14)
+
+    self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff')
+    self.axes[1].set_title ("N", fontsize=16)
+
+    self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d')
+    self.axes[2].set_title ("C", fontsize=16)
+
+    self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+    self.canvas.get_tk_widget().pack()
+    self.canvas.draw()
+
+    toolbar = NavigationToolbar2TkAgg(self.canvas, self.plot_frame)
+    toolbar.update()
+
+
+  def show_peak_in_hist(self, *args):
+    spec = self.session.selected_spectrum()
+    peaks = self.session.selected_peaks()
+    text_style = dict(size=30)
+
+    try:
+        for txt in self.txt:
+            txt.remove()
+    except:
+        pass
+
+    self.txt = []
+    for n in range(len(spec.nuclei)):
+        if spec.nuclei[n] == '1H':
+                this_axes = self.axes[0]
+        elif spec.nuclei[n] == '15N':
+                this_axes = self.axes[1]
+        elif spec.nuclei[n] == '13C':
+                this_axes = self.axes[2]
+
+        for peak in peaks:
+            self.txt.append(this_axes.text(peak.frequency[n], 0, 'x', **text_style))
+
+    self.canvas.draw()
+
+
+# ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 def show_xcheck_dialog(session):
   sputil.the_dialog(xcheck_dialog, session).show_window(1)
