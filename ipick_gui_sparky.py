@@ -202,28 +202,33 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # Advanced frame
 
     # listbox
-    a_topfrm = tk.Frame(self.adv_frame)
-    a_topfrm.pack(side='top', fill='both', expand=0, padx=8)
+    a_listbox_frm = tk.Frame(self.adv_frame)
+    a_listbox_frm.pack(side='top', fill='both', expand=0, padx=8)
 
 
     # pos neg peaks
-    a_midfrm_pos_neg = tk.Frame(self.adv_frame)
-    a_midfrm_pos_neg.pack(fill='both', expand=1, padx=8, pady=8)
+    a_pos_neg_frm = tk.Frame(self.adv_frame)
+    a_pos_neg_frm.pack(fill='both', expand=1, padx=8, pady=8)
 
 
     # noise contour
-    a_midfrm_nois_cont = tk.Frame(self.adv_frame)
-    a_midfrm_nois_cont.pack(fill='both', expand=1, padx=8, pady=8)
+    a_nois_cont_frm = tk.Frame(self.adv_frame)
+    a_nois_cont_frm.pack(fill='both', expand=1, padx=8, pady=8)
 
 
     # noise button & noise
-    a_midfrm = tk.Frame(self.adv_frame)
-    a_midfrm.pack(fill='both', expand=1, padx=8, pady=5)
+    a_nois_cont_but_frm = tk.Frame(self.adv_frame)
+    a_nois_cont_but_frm.pack(fill='both', expand=1, padx=8, pady=5)
 
 
     # resolution
-    a_midfrm_res = tk.Frame(self.adv_frame)
-    a_midfrm_res.pack(fill='both', expand=1, padx=8, pady=8)
+    a_resolution_frm = tk.Frame(self.adv_frame)
+    a_resolution_frm.pack(fill='both', expand=1, padx=8, pady=8)
+
+
+    # post-processing
+    a_postpro_frm = tk.Frame(self.adv_frame)
+    a_postpro_frm.pack(fill='both', expand=1, padx=8, pady=8)
 
 
     # ipick button & output
@@ -231,7 +236,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     a_btmfrm.pack(side='bottom', fill='both', expand=1, padx=8)
 
 
-    self.a_tree = tkutil.scrolling_list(a_topfrm, 'Select a spectrum for pick peaking:', 5, True)
+    self.a_tree = tkutil.scrolling_list(a_listbox_frm, 'Select a spectrum for pick peaking:', 5, True)
     self.a_tree.listbox['selectmode'] = 'single'
     #self.a_tree.listbox['xscrollcommand'] = None
     self.a_tree.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
@@ -244,16 +249,16 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #a_update_button.pack(side='top', anchor='w', expand=0, pady=(0, 5))
 
 
-    nois_cont_label = tk.Label(a_midfrm_nois_cont, text="Use:")
+    nois_cont_label = tk.Label(a_nois_cont_frm, text="Use:")
     nois_cont_label.pack(side='left', fill='both')
     self.nois_cont = tk.StringVar()
     self.nois_cont.set('1')
 
-    radio_cont = tk.Radiobutton(a_midfrm_nois_cont, text="Contour Level", highlightthickness = 0,
+    radio_cont = tk.Radiobutton(a_nois_cont_frm, text="Contour Level", highlightthickness = 0,
                                         variable=self.nois_cont, value='2', command=self.noise_or_contour)
     radio_cont.pack(side='left')
 
-    radio_nois = tk.Radiobutton(a_midfrm_nois_cont, text="Noise Level", highlightthickness = 0,
+    radio_nois = tk.Radiobutton(a_nois_cont_frm, text="Noise Level", highlightthickness = 0,
                                         variable=self.nois_cont, value='1', command=self.noise_or_contour)
     radio_nois.pack(side='left')
 
@@ -262,46 +267,46 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(radio_cont, 'Use Contour level as the criteria for peak picking')
 
 
-    self.a_res = tkutil.entry_field(a_midfrm_nois_cont, '       |     Res: ', width=3, initial='1')
+    self.a_res = tkutil.entry_field(a_nois_cont_frm, '       |     Res: ', width=3, initial='1')
     self.a_res.entry.bind('<Return>', self.set_resolution)
     self.a_res.frame.pack(side='left')
     tkutil.create_hint(self.a_res.frame, 'Resolution. Choose between 1 and 5. Lower means more sensitive')
 
 
 
-    self.a_noise_button = tk.Button(a_midfrm, text='Find Noise Level', command=self.noise_level)
+    self.a_noise_button = tk.Button(a_nois_cont_but_frm, text='Find Noise Level', command=self.noise_level)
     #self.a_noise_button.pack(side='left', padx=20)
 
-    self.a_noise = tkutil.entry_field(a_midfrm, 'Noise Level: ', width=16)
+    self.a_noise = tkutil.entry_field(a_nois_cont_but_frm, 'Noise Level: ', width=16)
     self.a_noise.entry.bind('<Return>', self.noise_level)
     #self.a_noise.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_noise_button, 'Get the automatic noise level selection')
     tkutil.create_hint(self.a_noise.frame, 'The automatic noise level is shown here. You can change it as you like.')
 
 
-    self.a_contour_button = tk.Button(a_midfrm, text='Find Contour Level', command=self.contour_level)
+    self.a_contour_button = tk.Button(a_nois_cont_but_frm, text='Find Contour Level', command=self.contour_level)
     self.a_contour_button.pack(side='left', padx=20)
 
-    self.a_contour = tkutil.entry_field(a_midfrm, 'Contour Level: ', width=12)
+    self.a_contour = tkutil.entry_field(a_nois_cont_but_frm, 'Contour Level: ', width=12)
     self.a_contour.entry.bind('<Return>', self.contour_level)
     self.a_contour.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_contour_button, 'Get the automatic contour level selection')
     tkutil.create_hint(self.a_contour.frame, 'The automatic contour level is shown here. You can change it as you like.')
 
 
-    pos_neg_label = tk.Label(a_midfrm_pos_neg, text="Select:")
+    pos_neg_label = tk.Label(a_pos_neg_frm, text="Select:")
     pos_neg_label.pack(side='left', fill='both')
     self.pos_neg = tk.StringVar()
     self.pos_neg.set('0')
 
-    radio_pos = tk.Radiobutton(a_midfrm_pos_neg, text="Positive peaks", highlightthickness = 0,
+    radio_pos = tk.Radiobutton(a_pos_neg_frm, text="Positive peaks", highlightthickness = 0,
                                         variable=self.pos_neg, value='1')
     radio_pos.pack(side='left')
 
-    radio_neg = tk.Radiobutton(a_midfrm_pos_neg, text="Negative peaks", highlightthickness = 0,
+    radio_neg = tk.Radiobutton(a_pos_neg_frm, text="Negative peaks", highlightthickness = 0,
                                         variable=self.pos_neg, value='-1')
     radio_neg.pack(side='left')
-    radio_both = tk.Radiobutton(a_midfrm_pos_neg, text="Both", highlightthickness = 0,
+    radio_both = tk.Radiobutton(a_pos_neg_frm, text="Both", highlightthickness = 0,
                                         variable=self.pos_neg, value='0')
     radio_both.pack(side='left')
     radio_both.select()
@@ -311,18 +316,18 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     # separator
-    sep = tk.Frame(a_midfrm_res, height=2, bd=1, relief="ridge")
+    sep = tk.Frame(a_postpro_frm, height=2, bd=1, relief="ridge")
     sep.pack(fill="both", padx=5, pady=(5,5), side = 'top')
 
 
     a_automation_font = tkFont.Font(size=11)
-    a_automation_label = tk.Label(a_btmfrm, text="Post-processing Automation:", font=a_automation_font)
+    a_automation_label = tk.Label(a_postpro_frm, text="Post-processing Automation:", font=a_automation_font)
     a_automation_label.pack(side='top', anchor='w')
     tkutil.create_hint(a_automation_label, 'These options will run after the peak picking process')
 
 
     # import frame
-    a_import_frm = tk.Frame(a_btmfrm)
+    a_import_frm = tk.Frame(a_postpro_frm)
     a_import_frm.pack(side='top', expand=1, anchor='w')
 
 
@@ -344,7 +349,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     # integration frame
-    a_integration_frm = tk.Frame(a_btmfrm)
+    a_integration_frm = tk.Frame(a_postpro_frm)
     a_integration_frm.pack(side='top', fill='both', expand=1)
 
 
@@ -374,21 +379,22 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     # integration_radio frame
-    a_integration_radio_frm = tk.Frame(a_btmfrm)
-    a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
+    self.a_integration_radio_frm = tk.Frame(a_postpro_frm)
+    #a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
 
-    integration_radio_label = tk.Label(a_integration_radio_frm, text="Auto Integration mode:")
+    integration_radio_label = tk.Label(self.a_integration_radio_frm, text="Auto Integration mode:")
     integration_radio_label.pack(side='left', fill='both')
     self.integration_radio = tk.StringVar()
     self.integration_radio.set('1')
-    integration_radio_button1 = tk.Radiobutton(a_integration_radio_frm, text="fit function ", highlightthickness = 0,
+    integration_radio_button1 = tk.Radiobutton(self.a_integration_radio_frm, text="Individual fit", highlightthickness = 0,
                                         variable=self.integration_radio, value='1')
     integration_radio_button1.pack(side='left')
+    tkutil.create_hint(integration_radio_button1, 'Each peak will be fitted individually not considering the neighbor peaks')
 
-    integration_radio_button2 = tk.Radiobutton(a_integration_radio_frm, text="pi command", highlightthickness = 0,
-                                        variable=self.integration_radio, value='2')
+    integration_radio_button2 = tk.Radiobutton(self.a_integration_radio_frm, text="Group fit", highlightthickness = 0,
+                                        variable=self.integration_radio, value='2', command=self.groupfit_selected)
     integration_radio_button2.pack(side='left')
-
+    tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
 
 
 
@@ -400,7 +406,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     a_ipick_button = tk.Button(a_btmfrm, text='Run iPick', font=('bold'),
                                   height=1, width=10, command=self.run_ipick)
-    a_ipick_button.pack(side='top', pady=(30,5))
+    a_ipick_button.pack(side='top', pady=(15,5))
     tkutil.create_hint(a_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
 
@@ -437,6 +443,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # functions
 # ---------------------------------------------------------------------------
 
+  def groupfit_selected(self, *args):
+    d = groupfit_dialog(self.session)
+    d.show_window(1)
+
+
+# ---------------------------------------------------------------------------
   def show_pick_list(self, *args):
       spectrum = self.session.selected_spectrum()
       if spectrum == None:
@@ -477,6 +489,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # ---------------------------------------------------------------------------
   def integration_check(self, *args):
       self.auto_integration = self.a_check_integration.get()
+      if self.a_check_integration.get():
+            self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
+      else:
+            self.a_integration_radio_frm.pack_forget()
+
 
 # ---------------------------------------------------------------------------
   def set_resolution(self, *args):
@@ -494,7 +511,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # ---------------------------------------------------------------------------
   def update_tree(self):
     if self.session.project == None:
-        tkMessageBox.showinfo(title='Error', message='No spectrum is loaded!')
+        tkMessageBox.showwarning(title='Error', message='No spectrum is loaded!')
         return
 
     self.b_tree.clear()
@@ -515,21 +532,21 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         widget = self.b_status
         data_list = self.b_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         widget = self.a_status
         data_list = self.a_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
     widget.config(text="Status: Spectrum selected. Check the contour level!")
     widget.update()
 
     if idx == None:
-        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
         return
 
     # print(self.spec_list[idx].data_path)
@@ -553,19 +570,19 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         widget = self.b_status
         data_list = self.b_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         widget = self.a_status
         data_list = self.a_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
 
     if idx == None:
-        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
         return
 
     widget.config(text="Status: Noise level found. Now run iPick!")
@@ -664,14 +681,14 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if (self.basic_adv == 'basic'):
         data_list = self.b_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.b_tree.selected_line_numbers()[0]
         widget = self.b_status
     else:
         data_list = self.a_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
         widget = self.a_status
@@ -679,7 +696,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     widget.update()
 
     if idx == None:
-        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
         return
 
     self.set_resolution()
@@ -728,7 +745,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                 try:
                     remove('done')
                 except:
-                    tkMessageBox.showinfo(title='Error', message='Could not delete "done" file')
+                    tkMessageBox.showwarning(title='Error', message='Could not delete "done" file')
 
                 break
 
@@ -799,25 +816,25 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def place_peaks(self):
     peaks = open('peaks.list', 'r').readlines()
     if len(peaks) < 4:
-        tkMessageBox.showinfo(title='Error', message='Peak list file is empty!')
+        tkMessageBox.showwarning(title='Error', message='Peak list file is empty!')
         return
 
 
     if (self.basic_adv == 'basic'):
         data_list = self.b_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.b_tree.selected_line_numbers()[0]
     else:
         data_list = self.a_tree.selected_line_data()
         if len(data_list) < 1:
-            tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
 
     if idx == None:
-        tkMessageBox.showinfo(title='Error', message='The spectrum was not selected!')
+        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
         return
 
     spec = self.spec_list[idx]
@@ -902,20 +919,57 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             if self.auto_integration:
                 if self.integration_radio.get() == '1':
                     pk.fit(view)
-                else:
-                    pk.selected = 1
-                    self.session.command_characters("pi")
+#                else:
+#                    pk.selected = 1
+#                    self.session.command_characters("pi")
 
-
-        #if spec.dimension == 2:
-        #    spec.place_peak(new_peak)
-
+    if self.integration_radio.get() == '2':
+        for p in spec.peak_list():
+            p.selected = 1
+        self.session.command_characters("pi")
+        for p in spec.peak_list():
+            p.selected = 0
 
     print('\nImport Completed! ' + str(placed_peaks) + ' new peaks are placed on the spectrum.')
     tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
 
     #self.session.command_characters('lt')
-    self.show_pick_list()    # show our peak list instead of the default one
+    self.show_pick_list()    # show _our_ peak list instead of the default one
+
+
+
+#####################################################################################
+
+class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
+
+  def __init__(self, session):
+
+    self.session = session
+    tkutil.Dialog.__init__(self, session.tk, 'Group fit')
+
+    main_frame = tk.Frame(self.top, )
+    main_frame.pack(side='top', fill='both', expand=1, padx=10, pady=10)
+
+    instruction_label = tk.Label(main_frame, justify='left',
+                                 text="Please open the Integration tool (two-letter-code it) for \neach experiment (select the spectra window and type \"it\") \nand then change the setting based on the picture below. \nYou need to repeat this for each experiment.")
+    instruction_label.pack(side='top', anchor='w', pady=(0,20))
+
+    #from PIL import ImageTk, Image
+    #results in:
+    #ImportError: The _imaging C module is not installed
+
+    widget = tk.Label(main_frame, compound='top')
+    widget.image = tk.PhotoImage(file=IPICK_PATH + "fit.png")
+    widget['image'] = widget.image
+    widget.pack()
+    tkutil.create_hint(widget, 'This is a picture of the settings you need to apply')
+
+    close_instruction_label = tk.Label(main_frame, justify='left',
+                                       text="You can close this window when you applied the changes \nin each Integration tool window.")
+    close_instruction_label.pack(side='top', anchor='w', pady=(15,5))
+
+    close_button = tk.Button(main_frame, text='Close', command=self.close_cb)
+    close_button.pack(side='top', pady=(5,10))
 
 
 
@@ -954,17 +1008,32 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 			   ('Close', self.close_cb),
                ('Help', sputil.help_cb(session, 'PeakListPython')),
 			   )
-    br2 = tkutil.button_row(self.top,
-			   ('Sort by Reliability Score', self.sort_rs),
-			   ('Remove peaks with Reliability Score of 0', self.remove_rs0),
-			   )
     br.frame.pack(side = 'top', anchor = 'w')
-    br2.frame.pack(side = 'top', anchor = 'w')
+
+    rs_frame = tk.Frame(self.top)
+    rs_frame.pack(anchor = 'w')
+
+    br2 = tkutil.button_row(rs_frame,
+			   ('Sort by Reliability Score', self.sort_rs),
+			   #('Remove peaks with Reliability Score of 0', self.remove_rs0),
+			   )
+    br2.frame.pack(side = 'left', anchor = 'w')
+
+    self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Threshold for removing peaks:',
+                                                width=6, initial='100.0')
+    self.remove_rs0_thresh.frame.pack(side='left', padx=(5,5))
+    tkutil.create_hint(self.remove_rs0_thresh.frame,
+                       'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
+
+    remove_rs0_button = tk.Button(rs_frame, text='Remove', command=self.remove_rs0)
+    remove_rs0_button.pack(side='left')
+    tkutil.create_hint(remove_rs0_button,
+                       'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
 
     keypress_cb = pyutil.precompose(sputil.command_keypress_cb, session)
     pl.listbox.bind('<KeyPress>', keypress_cb)
 
-    tkutil.Stoppable.__init__(self, progress_label, br.buttons[5])
+    tkutil.Stoppable.__init__(self, progress_label, br.buttons[4])
 
   # ---------------------------------------------------------------------------
   #
@@ -1140,17 +1209,26 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     else:
       peaks = self.peaks
 
-    data = []
-    for peak in peaks:
-        if peak.is_assigned == 1:
-        # we won't delete a peak that the user has assigned
-            continue
+    threshold = float(self.remove_rs0_thresh.variable.get())
+    delete_count = 0
 
-        if reliability_score(peak) == 0:
-            peak.selected = 1
-            self.session.command_characters("")
+    confirmation = tkMessageBox.askyesno(title='Remove peaks?',
+             message='Do you want to remove peaks with ABSOLUTE Reliability Score below ' + str(threshold) + '?')
 
-    self.sort_reliability()
+    if confirmation == True:
+        for peak in peaks:
+            if peak.is_assigned == 1:
+            # we won't delete a peak that the user has assigned
+                continue
+
+            if abs(reliability_score(peak)) < threshold:
+                peak.selected = 1
+                self.session.command_characters("")
+                delete_count += 1
+
+        print(str(delete_count) + ' peaks were removes')
+
+        self.sort_reliability()
 
   # ---------------------------------------------------------------------------
   #
@@ -1276,7 +1354,12 @@ def reliability_score(peak):
     except:
         pass
 
-    RS = (volume / volume_coeff) + (SNR * SNR_coeff) + (linewidth * linewidth_coeff)
+    try:
+        RS = (volume / volume_coeff) + (SNR * SNR_coeff) + (linewidth * linewidth_coeff)
+    except:
+        RS = 0
+
+
     return RS
 
 field_classes = []
