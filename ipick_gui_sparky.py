@@ -6,7 +6,8 @@ iPick GUI for Sparky
 @author: Mehdi Rahimi
 """
 
-from os import path, popen, remove, system, getcwd
+import os
+import signal
 import subprocess
 import time
 import sys
@@ -42,20 +43,21 @@ manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs = [[]] * 6
 class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def __init__(self, session):
 
-    #print(getcwd())
+    #print(os.getcwd())
 
     # prepare temp files
-    if path.exists(LOG_PATH + 'process.log'):
-        remove(LOG_PATH + 'process.log')
+    if os.path.exists(LOG_PATH + 'process.log'):
+        os.remove(LOG_PATH + 'process.log')
 
-    if path.exists('done'):
-        remove('done')
+    if os.path.exists('done'):
+        os.remove('done')
 
     open(LOG_PATH + 'process.log', 'w').write('')
 
 
     self.session = session
     self.basic_adv = 'basic'
+    self.stopped_flag = 0
     # these will be updated later:
     self.resolution = '1'
     self.import_dist = 0.0
@@ -63,18 +65,18 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.auto_integration = False
 
 
-    tkutil.Dialog.__init__(self, session.tk, 'iPick')
+    tkutil.Dialog.__init__(self, session.tk, 'iPick (Integrated UCSF Peak Picker)')
 
 
-    ipick_label = tk.Label(self.top, text="Integrated UCSF Peak Picker v1", font=20)
-    ipick_label.pack(side='top', fill='both', expand=1, pady=20)
+    #ipick_label = tk.Label(self.top, text="Integrated UCSF Peak Picker v1", font=20)
+    #ipick_label.pack(side='top', fill='both', expand=1, pady=(20,10))
 
 
 
 # main frames
 
     radio_frame = tk.Frame(self.top)
-    radio_frame.pack(side='top', fill='both', expand=1, padx=8, pady=5)
+    radio_frame.pack(side='top', fill='both', expand=1, padx=8, pady=(15,5))
 
     self.basic_frame = tk.Frame(self.top)
     self.basic_frame.pack(side='bottom', fill='both', expand=1)
@@ -110,34 +112,29 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # Basic frame
 
     # listbox
-    b_topfrm = tk.Frame(self.basic_frame)
-    b_topfrm.pack(side='top', fill='both', expand=0, padx=8)
+    b_list_frm = tk.Frame(self.basic_frame)
+    b_list_frm.pack(side='top', fill='both', expand=0, padx=8)
+
+    # import frame
+    b_import_frm = tk.Frame(self.basic_frame)
+    b_import_frm.pack(side='top', fill='both', expand=1)
 
     # noise button & noise
-    b_midfrm = tk.Frame(self.basic_frame)
-    b_midfrm.pack(fill='both', expand=1, padx=8)
+    b_buttons_frm = tk.Frame(self.basic_frame)
+    b_buttons_frm.pack(fill='both', expand=1, padx=8)
 
-    # ipick button & output
+    # output
     b_btmfrm = tk.Frame(self.basic_frame)
     b_btmfrm.pack(side='bottom', fill='both', expand=1, padx=8)
 
 
-    self.b_tree = tkutil.scrolling_list(b_topfrm, 'Select a spectrum for pick peaking:', 5, True)
+    self.b_tree = tkutil.scrolling_list(b_list_frm, 'Select a spectrum for pick peaking:', 5, True)
     self.b_tree.listbox['selectmode'] = 'single'
     #self.b_tree.listbox['xscrollcommand'] = None
     self.b_tree.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
     #self.b_tree.heading.config(font=('Courier', 5))
     #self.b_tree.heading['font'] = ('normal')
     self.b_tree.frame.pack(side='top', fill='both', expand=1, pady=(5,10))
-
-
-    #update_button = tk.Button(b_btmfrm, text='Update List', command=self.update_tree)
-    #update_button.pack(side='top', anchor='w', expand=0, pady=(0, 5))
-
-
-    # import frame
-    b_import_frm = tk.Frame(b_btmfrm)
-    b_import_frm.pack(side='top', fill='both', expand=1)
 
 
     b_import_label = tk.Label(b_import_frm, text="Import peaks:")
@@ -157,19 +154,33 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
-    b_ipick_button = tk.Button(b_btmfrm, text='Run iPick', font=('bold'),
-                                  height=1, width=10, command=self.run_ipick)
-    b_ipick_button.pack(side='top', pady=30)
+    b_ipick_button = tk.Button(b_buttons_frm, text='Run iPick', width=18, command=self.run_ipick)
+    b_ipick_button.pack(side='left', pady=30)
     tkutil.create_hint(b_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
 
-
-##############################  for testing
-    b_ipick_button = tk.Button(b_btmfrm, text='Pick list', command=self.show_pick_list)
-    b_ipick_button.pack(side='top')
-##############################
+    #update_button = tk.Button(b_buttons_frm, text='Update List', command=self.update_tree)
+    #update_button.pack(side='left', anchor='w', expand=0)
 
 
+    b_ipick_button = tk.Button(b_buttons_frm, text='Pick list', command=self.show_pick_list)
+    b_ipick_button.pack(side='left')
+    tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
+
+    self.b_stop_button = tk.Button(b_buttons_frm, text='Stop', command=self.stop_button)
+    self.b_stop_button.pack(side='left')
+    tkutil.create_hint(self.b_stop_button, 'Stops any processing')
+
+
+#TODO: Add the section for iPick to the extensions.html file
+    help_button = tk.Button(b_buttons_frm, text='Help', command=sputil.help_cb(session, 'iPick'))
+    help_button.pack(side='left')
+    tkutil.create_hint(help_button, 'Opens a help page with more information about this module.')
+
+    b_progress_label = tk.Label(b_buttons_frm)
+    b_progress_label.pack(side = 'left', anchor = 'w')
+
+    tkutil.Stoppable.__init__(self, b_progress_label, self.b_stop_button)
 
 
     b_output_label = tk.Label(b_btmfrm, text="Output progress:")
@@ -208,12 +219,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # pos neg peaks
     a_pos_neg_frm = tk.Frame(self.adv_frame)
-    a_pos_neg_frm.pack(fill='both', expand=1, padx=8, pady=8)
+    a_pos_neg_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
 
 
     # noise contour
     a_nois_cont_frm = tk.Frame(self.adv_frame)
-    a_nois_cont_frm.pack(fill='both', expand=1, padx=8, pady=8)
+    a_nois_cont_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
 
 
     # noise button & noise
@@ -223,12 +234,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # resolution
     a_resolution_frm = tk.Frame(self.adv_frame)
-    a_resolution_frm.pack(fill='both', expand=1, padx=8, pady=8)
+    a_resolution_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
 
 
     # post-processing
     a_postpro_frm = tk.Frame(self.adv_frame)
-    a_postpro_frm.pack(fill='both', expand=1, padx=8, pady=8)
+    a_postpro_frm.pack(fill='both', expand=1, padx=8, pady=(0,8))
 
 
     # ipick button & output
@@ -317,7 +328,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # separator
     sep = tk.Frame(a_postpro_frm, height=2, bd=1, relief="ridge")
-    sep.pack(fill="both", padx=5, pady=(5,5), side = 'top')
+    sep.pack(fill="both", padx=5, pady=(0,7), side='top')
 
 
     a_automation_font = tkFont.Font(size=11)
@@ -351,7 +362,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     # integration frame
     a_integration_frm = tk.Frame(a_postpro_frm)
     a_integration_frm.pack(side='top', fill='both', expand=1)
-
 
 
     self.a_import_dis = tkutil.entry_field(a_integration_frm, 'Import Dist.: ', width=3, initial='.1')
@@ -397,18 +407,41 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
 
 
-
     # separator
     #sep = tk.Frame(a_btmfrm, height=2, bd=1, relief="ridge")
     #sep.pack(fill="both", padx=5, pady=(5,12), side = 'top')
 
 
+    # buttons frame
+    a_buttons_frm = tk.Frame(a_btmfrm)
+    a_buttons_frm.pack(side='top', fill='both', expand=1, pady=(10,8))
 
-    a_ipick_button = tk.Button(a_btmfrm, text='Run iPick', font=('bold'),
-                                  height=1, width=10, command=self.run_ipick)
-    a_ipick_button.pack(side='top', pady=(15,5))
+
+    a_ipick_button = tk.Button(a_buttons_frm, text='Run iPick', width=18, command=self.run_ipick)
+    a_ipick_button.pack(side='left')
     tkutil.create_hint(a_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
+
+    #a_update_button = tk.Button(a_buttons_frm, text='Update List', command=self.update_tree)
+    #a_update_button.pack(side='left', anchor='w', expand=0)
+
+
+    a_ipick_button = tk.Button(a_buttons_frm, text='Pick list', command=self.show_pick_list)
+    a_ipick_button.pack(side='left')
+    tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
+
+    self.a_stop_button = tk.Button(a_buttons_frm, text='Stop', command=self.stop_button)
+    self.a_stop_button.pack(side='left')
+    tkutil.create_hint(self.a_stop_button, 'Stops any processing')
+
+    a_help_button = tk.Button(a_buttons_frm, text='Help', command=sputil.help_cb(session, 'iPick'))
+    a_help_button.pack(side='left')
+    tkutil.create_hint(a_help_button, 'Opens a help page with more information about this module.')
+
+    a_progress_label = tk.Label(a_buttons_frm)
+    a_progress_label.pack(side='left', anchor='w')
+
+    tkutil.Stoppable.__init__(self, a_progress_label, self.a_stop_button)
 
 
     a_output_label = tk.Label(a_btmfrm, text="Output progress:")
@@ -442,7 +475,45 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # ---------------------------------------------------------------------------
 # functions
 # ---------------------------------------------------------------------------
+  def stop_button(self, *args):
+    try:
+        os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
 
+    #    import psutil
+    #    process = psutil.Process(self.proc.pid)
+    #    for proc in process.children(recursive=True):
+    #        proc.kill()
+    #    process.kill()
+
+        done_file = open('done', 'w')
+        done_file.close()
+
+        time.sleep(0.5)
+
+        if (self.basic_adv == 'basic'):
+            output = self.b_output
+            status = self.b_status
+        else:
+            output = self.a_output
+            status = self.a_status
+
+        output.delete('1.0', tk.END)
+        output.update()
+
+        status.config(text="Status: Process Stopped!")
+        status.update()
+
+        self.stopped_flag = 1
+
+    except:
+        pass
+
+    self.stop_cb()
+    self.a_stop_button['state'] = 'disabled'
+    self.b_stop_button['state'] = 'disabled'
+
+
+# ---------------------------------------------------------------------------
   def groupfit_selected(self, *args):
     d = groupfit_dialog(self.session)
     d.show_window(1)
@@ -672,7 +743,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                " --overwrite && touch done")
 
 
-    proc = subprocess.Popen([cmd], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+    self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True, preexec_fn=os.setsid)
 
 
 # ---------------------------------------------------------------------------
@@ -716,10 +787,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     try:
 
-        if path.exists('peaks.list'):
-            remove('peaks.list')
+        if os.path.exists('peaks.list'):
+            os.remove('peaks.list')
 
-        self.ipick_process(UCSF_FILE)
+        #self.ipick_process(UCSF_FILE)
+        self.stoppable_call(self.ipick_process, UCSF_FILE)
+        self.b_stop_button['state'] = 'normal'
+        self.a_stop_button['state'] = 'normal'
 
 
         while True:
@@ -741,9 +815,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
             time.sleep(0.5)
 
-            if path.exists('done'):
+            if os.path.exists('done'):
                 try:
-                    remove('done')
+                    os.remove('done')
                 except:
                     tkMessageBox.showwarning(title='Error', message='Could not delete "done" file')
 
@@ -763,37 +837,42 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         print(sys.exc_type)
 
     else:
-        log = open(LOG_PATH + 'process.log', 'r')
+#        log = open(LOG_PATH + 'process.log', 'r')
+#
+#        if (self.basic_adv == 'basic'):
+#            widget = self.b_output
+#        else:
+#            widget = self.a_output
+#
+#
+#        widget.delete('1.0', tk.END)
+#        widget.insert(tk.END, log.read())
+#        widget.see(tk.END)
+#        widget.update()
+#
+#        log.close()
 
-        if (self.basic_adv == 'basic'):
-            widget = self.b_output
-        else:
-            widget = self.a_output
+        if self.stopped_flag == 0:
+
+            if (self.basic_adv == 'basic'):
+                widget = self.b_status
+            else:
+                widget = self.a_status
+            widget.config(text="Status: peak picking is done.")
+            widget.update()
+
+            print('Found peaks are also stored in "' + os.getcwd() + '/peaks.list" file.')
+
+            tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
 
 
-        widget.delete('1.0', tk.END)
-        widget.insert(tk.END, log.read())
-        widget.see(tk.END)
-        widget.update()
+            if ((self.basic_adv == 'basic') and self.b_check_import.get()) or \
+               ((self.basic_adv == 'adv') and self.a_check_import.get()):
+                    self.stoppable_call(self.place_peaks)
 
-        log.close()
-
-
-        if (self.basic_adv == 'basic'):
-            widget = self.b_status
-        else:
-            widget = self.a_status
-        widget.config(text="Status: iPick is done.")
-        widget.update()
-
-        print('Found peaks are also stored in "' + getcwd() + '/peaks.list" file.')
-
-        tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
-
-
-        if ((self.basic_adv == 'basic') and self.b_check_import.get()) or \
-           ((self.basic_adv == 'adv') and self.a_check_import.get()):
-                self.place_peaks()
+    self.stopped_flag = 0
+    self.a_stop_button['state'] = 'disabled'
+    self.b_stop_button['state'] = 'disabled'
 
 
 # ---------------------------------------------------------------------------
@@ -814,6 +893,14 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def place_peaks(self):
+    if (self.basic_adv == 'basic'):
+        status = self.b_status
+    else:
+        status = self.a_status
+    status.config(text="Status: Importing the peaks ...")
+    status.update()
+
+
     peaks = open('peaks.list', 'r').readlines()
     if len(peaks) < 4:
         tkMessageBox.showwarning(title='Error', message='Peak list file is empty!')
@@ -864,6 +951,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     placed_peaks = 0
 
     for i in range(2, len(peaks)):
+        self.top.update()
         new_peak = peaks[i].split()[1:-1]   # also removes the first and last columns from the peak list file
         new_peak = tuple(float(e) for e in new_peak)
         new_peak_flag = True
@@ -930,6 +1018,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         for p in spec.peak_list():
             p.selected = 0
 
+    status.config(text="Status: Importing the peaks is completed.")
+    status.update()
+
     print('\nImport Completed! ' + str(placed_peaks) + ' new peaks are placed on the spectrum.')
     tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
 
@@ -965,7 +1056,7 @@ class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(widget, 'This is a picture of the settings you need to apply')
 
     close_instruction_label = tk.Label(main_frame, justify='left',
-                                       text="You can close this window when you applied the changes \nin each Integration tool window.")
+                                       text="You can close this window when you applied the changes \nin each Integration tool window.\n\nNote: the fitting process can take a long time when there \nare many peaks in your experiment.")
     close_instruction_label.pack(side='top', anchor='w', pady=(15,5))
 
     close_button = tk.Button(main_frame, text='Close', command=self.close_cb)
@@ -1020,7 +1111,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     br2.frame.pack(side = 'left', anchor = 'w')
 
     self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Threshold for removing peaks:',
-                                                width=6, initial='100.0')
+                                                width=12, initial='100.0')
     self.remove_rs0_thresh.frame.pack(side='left', padx=(5,5))
     tkutil.create_hint(self.remove_rs0_thresh.frame,
                        'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
@@ -1335,9 +1426,9 @@ def reliability_score(peak):
     SNR = sputil.peak_height(peak) / peak.spectrum.noise
     linewidth = sum(pyutil.seq_product(peak.line_width, peak.spectrum.hz_per_ppm))
 
-    volume_coeff = 1e5
-    SNR_coeff = 3
-    linewidth_coeff = 0.3
+    volume_coeff = 1e7
+    SNR_coeff = 10
+    linewidth_coeff = 0.1
 
     try:
         if manual_coeff.get():
@@ -1415,7 +1506,7 @@ field_classes.append(data_height_field)
 class signal_to_noise_field(peak_list_field):
   name = 'Signal / Noise'
   def title(self, dim): return 'S/N'
-  def size(self, dim): return 6
+  def size(self, dim): return 10
   def text(self, peak):
     return '%.1f' % (sputil.peak_height(peak) / peak.spectrum.noise)
 field_classes.append(signal_to_noise_field)
@@ -1454,7 +1545,7 @@ field_classes.append(color_field)
 # -------------------------------------------------------------------------
 #
 class RS_field(peak_list_field):
-  name = 'Reliability Score'
+  name = '  Reliability Score'
   def size(self, dim): return 8
   def text(self, peak): return ' %7.2f' % reliability_score(peak)
 field_classes.append(RS_field)
@@ -1502,14 +1593,14 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
     tkutil.create_hint(checkbox_coeff, 'Manually specify the coefficients for the Reliability Score formula')
 
 
-    coeff1 = tkutil.entry_field(opt, 'Volume Coeff.: ', width=5, initial='1e5')
+    coeff1 = tkutil.entry_field(opt, 'Volume Coeff.: ', width=5, initial='1e7')
     tkutil.create_hint(coeff1.frame, 'Specify the coefficient for the Volume in the Reliability Score formula')
 
-    coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='3')
+    coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='10')
     tkutil.create_hint(coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio in the Reliability Score formula')
 
 
-    coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='0.3')
+    coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='0.1')
     tkutil.create_hint(coeff3.frame, 'Specify the coefficient for the Linewidth in the Reliability Score formula')
 
     SNR_abs = tk.BooleanVar()

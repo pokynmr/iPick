@@ -281,6 +281,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                 peak.note = 'xcheck:'
 
     for spec_pair in combinations_list:
+        self.top.update()
+
         s1 = spec_pair[0]
         s2 = spec_pair[1]
 
