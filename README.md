@@ -83,6 +83,11 @@ There are more options that you can use with the command line script. To see a f
 
 Please note that it is highly recommended that you use the SPARKY module instead of the command line tool.
 
+Here is an example of running iPick script:
+
+	python iPick.py -i ~/Ubiquitin_NMRFAM/Spectra/CHSQC.ucsf -o peaks.list -r 1 --threshold 50325.0 --overwrite -c 1
+	
+In this example, the input file is a CHSQC experiment and the output file (the list of the found peaks) will be named "peaks.list" in the current directory. Also, a threshold of 50325.0 has been defined. The last part of the command, "-c 1", indicates that we want to use only one CPU thread. This number can be increased as needed.
 
 ____________________________________________________
 
