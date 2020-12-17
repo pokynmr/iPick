@@ -11,7 +11,7 @@ import signal
 import subprocess
 import time
 import sys
-import copy
+import tempfile
 
 if sys.version_info[0] == 2:
   import Tkinter as tk
@@ -27,15 +27,21 @@ import sputil
 import tkutil
 import pyutil
 
+# if the version for the python packaged with Sparky changed, correct the lines bellow:
+PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'bin', 'python2.7')      # Linux
+if not os.path.exists(PYTHON_BIN):
+    PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')    # Windows
 
-LOG_PATH = '/tmp/'
-IPICK_PATH = '/home/samic/MyWorks/CODES/iPick/'
+IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
+LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
+DONE_FILE = os.path.join(IPICK_PATH, 'done')
 
 sys.path.append(IPICK_PATH)
 try:
     import iPick
 except ImportError:
     print('Could not find iPick to import')
+    tkMessageBox.showwarning(title='Error', message='Could not find iPick!')
 
 
 manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs = [[]] * 6
@@ -46,13 +52,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #print(os.getcwd())
 
     # prepare temp files
-    if os.path.exists(LOG_PATH + 'process.log'):
-        os.remove(LOG_PATH + 'process.log')
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
 
-    if os.path.exists('done'):
-        os.remove('done')
+    if os.path.exists(DONE_FILE):
+        os.remove(DONE_FILE)
 
-    open(LOG_PATH + 'process.log', 'w').write('')
+    open(LOG_FILE, 'w').write('')
 
 
     self.session = session
@@ -485,7 +491,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #        proc.kill()
     #    process.kill()
 
-        done_file = open('done', 'w')
+        done_file = open(DONE_FILE, 'w')
         done_file.close()
 
         time.sleep(0.5)
@@ -717,30 +723,30 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def ipick_process(self, UCSF_FILE):
-    cmd = ("python " + IPICK_PATH +
-            "/iPick.py -i " + UCSF_FILE +
+    cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
+            " -i " + UCSF_FILE +
             " -o peaks.list -r " + self.resolution +
             " --sign " + self.pos_neg.get() +
-            " --overwrite && touch done")
+            " --overwrite")
 
 
     if (self.nois_cont.get() == '1'):
         # using noise level
-        cmd = ("python " + IPICK_PATH +
-                "/iPick.py -i " + UCSF_FILE +
+        cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
+                " -i " + UCSF_FILE +
                 " -o peaks.list -r " + self.resolution +
                 " --sign " + self.pos_neg.get() +
                 " --threshold " + self.a_noise.variable.get() +
-                " --overwrite && touch done")
+                " --overwrite")
 
 
     elif (self.nois_cont.get() == '2'):
         # using contour level
-        cmd = ("python " + IPICK_PATH +
-               "/iPick.py -i " + UCSF_FILE +
+        cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
+               " -i " + UCSF_FILE +
                " -o peaks.list -r " + self.resolution +
                " --threshold " + self.a_contour.variable.get() +
-               " --overwrite && touch done")
+               " --overwrite")
 
 
     self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True, preexec_fn=os.setsid)
@@ -797,7 +803,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
         while True:
-            log = open(LOG_PATH + 'process.log', 'r')
+            log = open(LOG_FILE, 'r')
 
 
             if (self.basic_adv == 'basic'):
@@ -815,9 +821,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
             time.sleep(0.5)
 
-            if os.path.exists('done'):
+            if os.path.exists(DONE_FILE):
                 try:
-                    os.remove('done')
+                    os.remove(DONE_FILE)
                 except:
                     tkMessageBox.showwarning(title='Error', message='Could not delete "done" file')
 
@@ -837,7 +843,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         print(sys.exc_type)
 
     else:
-#        log = open(LOG_PATH + 'process.log', 'r')
+#        log = open(LOG_FILE, 'r')
 #
 #        if (self.basic_adv == 'basic'):
 #            widget = self.b_output
@@ -861,7 +867,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             widget.config(text="Status: peak picking is done.")
             widget.update()
 
-            print('Found peaks are also stored in "' + os.getcwd() + '/peaks.list" file.')
+            print('Found peaks are also stored in "' + os.path.join(os.getcwd(), 'peaks.list') + '" file.')
 
             tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
 
@@ -907,6 +913,15 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         return
 
 
+    if len(peaks) > 5000:
+        confirmation = tkMessageBox.askyesno(title='Continue?',
+             message='iPick will try to import ' + str(len(peaks)) + ' peaks. This can take a long time. Do you want to continue?')
+
+        if confirmation == False:
+            self.show_pick_list()
+            return
+
+
     if (self.basic_adv == 'basic'):
         data_list = self.b_tree.selected_line_data()
         if len(data_list) < 1:
@@ -932,7 +947,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.set_import_drop()
     self.integration_check()
 
-    spec_peaks = copy.deepcopy(spec.peak_list())
+    spec_peaks = spec.peak_list()
     #print spec_peaks[1].frequency[0]
 
     print('\n\nCurrent peaks in the spectra: ' + str(len(spec_peaks)))
@@ -1050,7 +1065,7 @@ class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
     #ImportError: The _imaging C module is not installed
 
     widget = tk.Label(main_frame, compound='top')
-    widget.image = tk.PhotoImage(file=IPICK_PATH + "fit.png")
+    widget.image = tk.PhotoImage(file=os.path.join(IPICK_PATH, 'fit.png'))
     widget['image'] = widget.image
     widget.pack()
     tkutil.create_hint(widget, 'This is a picture of the settings you need to apply')
@@ -1079,13 +1094,13 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     tkutil.Dialog.__init__(self, session.tk, self.title)
 
-    pl = sputil.peak_listbox(self.top)
-    pl.frame.pack(side = 'top', fill = 'both', expand = 1)
-    pl.listbox['selectmode'] = 'extended'
-    pl.listbox.bind('<ButtonRelease-1>', pl.select_peak_cb)
-    pl.listbox.bind('<ButtonRelease-2>', pl.goto_peak_cb)
-    pl.listbox.bind('<Double-ButtonRelease-1>', pl.goto_peak_cb)
-    self.peak_list = pl
+    self.pl = sputil.peak_listbox(self.top)
+    self.pl.frame.pack(side = 'top', fill = 'both', expand = 1)
+    self.pl.listbox['selectmode'] = 'extended'
+    self.pl.listbox.bind('<ButtonRelease-1>', self.peak_selected)
+    self.pl.listbox.bind('<ButtonRelease-2>', self.pl.goto_peak_cb)
+    self.pl.listbox.bind('<Double-ButtonRelease-1>', self.pl.goto_peak_cb)
+    self.peak_list = self.pl
 
     progress_label = tk.Label(self.top, anchor = 'nw')
     progress_label.pack(side = 'top', anchor = 'w')
@@ -1122,9 +1137,18 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
                        'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
 
     keypress_cb = pyutil.precompose(sputil.command_keypress_cb, session)
-    pl.listbox.bind('<KeyPress>', keypress_cb)
+    self.pl.listbox.bind('<KeyPress>', keypress_cb)
 
     tkutil.Stoppable.__init__(self, progress_label, br.buttons[4])
+
+  # ---------------------------------------------------------------------------
+  #
+  def peak_selected(self, *args):
+    self.pl.select_peak_cb(*args)
+
+    peaks = self.session.selected_peaks()
+    RS = reliability_score(peaks[-1])
+    self.remove_rs0_thresh.variable.set('%7.2f' % RS)
 
   # ---------------------------------------------------------------------------
   #
@@ -1545,8 +1569,9 @@ field_classes.append(color_field)
 # -------------------------------------------------------------------------
 #
 class RS_field(peak_list_field):
-  name = '  Reliability Score'
-  def size(self, dim): return 8
+  name = 'Reliability Score'
+  def title(self, dim): return 'Reliability Score'
+  def size(self, dim): return 10 * dim
   def text(self, peak): return ' %7.2f' % reliability_score(peak)
 field_classes.append(RS_field)
 

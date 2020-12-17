@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # UCSF tool
-# 
+#
 # -----------------------------------------------------------------------------
 #
 # Developed by Woonghee Lee
@@ -9,13 +9,13 @@
 # Department of Bichemistry, University of Wisconsin at Madison
 #
 # Last updated: December 10, 2019
-# 
+#
 # This tool is to read, write and transform ucsf files
 #
 # Developed since July, 2018
 #
 # -----------------------------------------------------------------------------
-# 
+#
 # e.g. Use help() function to see what this does
 #   import sys
 #   sys.path.append("/home/samic/Desktop/wlee_group/source/rahimi/ucsfTool")
@@ -78,6 +78,7 @@ import random
 random.seed()
 import time, datetime
 import multiprocessing
+import tempfile
 
 tile_count_buffer = 256 # we will hold tile max 256 in memory (approx. 8mb)
 #tile_count_buffer = 4096 # 128mb # we will hold tile max 512 in memory (approx. 16mb)
@@ -93,7 +94,7 @@ def print_log(*args):
             msg += str(s)
         except:
             msg += '! Could not convert to String'
-    f = open('/tmp/process.log', 'a')
+    f = open(os.path.join(tempfile.gettempdir(), 'process.log'), 'a')
     f.write(msg + '\n')
     f.close()
     print(*args)
@@ -169,16 +170,16 @@ class ucsfTool:
     self.pixel_size = []
     self.is_opened = 0
     self.cache_data = None
-        
+
   # ---------------------------------------------------------------------------
   # Destructor
-  #      
+  #
   def __del__(self):
     self.ucsf_close()
-  
+
   # ---------------------------------------------------------------------------
   # Help
-  #      
+  #
   def help(self):
     print_log("""
     ucsf_open(optional: filename)
@@ -206,7 +207,7 @@ class ucsfTool:
     grids_to_shifts(grids):
     points_to_peaks(points):
     get_data(grid_pt)
-    get_data_by_shifts(shift_pt)    
+    get_data_by_shifts(shift_pt)
     get_interpolated_data(grid_pt)
     get_interpolated_data_by_shifts(grid_pt)
     get_interpolated_data_by_peaks(peaks)
@@ -218,21 +219,21 @@ class ucsfTool:
     find_peaks(noise_level, sign=1, shift_restraint = None)
     find_fit_peaks(grid_pt, grid_buffers, sign=1, mode='gaussian')
     find_fit_peaks_by_shifts(shift_pt, shift_buffers, sign=1, mode='gaussian')
-    auto_pick_peaks(out_filename=None, grid_buffers=None, sign=0, max_count=None, 
+    auto_pick_peaks(out_filename=None, grid_buffers=None, sign=0, max_count=None,
                     noise_filter = 8., shift_restraint = None, write_peaks=True)
     write_sparky_peaks(out_filename, peaks, heights=None)
-    write_transform(out_filename, transform_mode, transform_factor, 
+    write_transform(out_filename, transform_mode, transform_factor,
                     transform_factor2, overwrite=0)
     write_projection(out_filename, proj_dim, proj_mode = 'avg', overwrite=0)
     write_planes(out_prefix, dim=0, reverse=1, init=1, gap=1, overwrite=0)
     write_swapped_axis(out_filename, dimension 1, dimension 2, overwrite=0)
-    write_shifted(out_filename, shift dimension, amount, 
+    write_shifted(out_filename, shift dimension, amount,
                   unit='ppm', overwrite=0)
     write_ucsf_file_header(file_object, file_header)
-    write_ucsf_axis_header(file_object, axis_header)                  
+    write_ucsf_axis_header(file_object, axis_header)
     write_concatenated (not yet implemented)
     """)
-    
+
   # ---------------------------------------------------------------------------
   # Init file header
   #
@@ -285,7 +286,7 @@ class ucsfTool:
                    'FreqMin':           template_axis_header['FreqMin'],
                    'FreqMax':           template_axis_header['FreqMax'],}
     return axis_header
-          
+
   # ---------------------------------------------------------------------------
   # Init tile data and return instance
   #
@@ -293,26 +294,26 @@ class ucsfTool:
     tile_data = {'TilePos': (),
                    'Values':()}
     return tile_data
-             
+
   # ---------------------------------------------------------------------------
   # Set ucsf file name to access
-  #                   
+  #
   def set_filename(self, file_name):
     if self.is_opened == 1:
       print_log('Error in ucsfTool:set_filename()- file name is already assigned')
       return 0
     self.file_name = file_name
     return 1
-    
+
   # ---------------------------------------------------------------------------
   # Get ucsf file name set previously
-  #  
+  #
   def get_filename(self):
     return self.file_name
-    
+
   # ---------------------------------------------------------------------------
   # open ucsf instances and read header and check validity
-  # 
+  #
   def ucsf_open(self, in_filename=None, nproc=1, cache_mode=True):
     if self.is_opened == 1:
       print_log('Error in ucsfTool:ucsf_open()- file is already opened')
@@ -325,7 +326,7 @@ class ucsfTool:
       print_log('Error in ucsfTool:ucsf_open()- file(%s) does not exist' \
             % (self.file_name))
       return 0
-            
+
     self.file_object = map(lambda x: open(self.file_name, 'rb', os.O_NONBLOCK), \
                             range(nproc))
     self.file_object[0].seek(0, 2) # seek_end
@@ -347,8 +348,8 @@ class ucsfTool:
       self.ucsf_close()
       return 0
 
-    self.ndim = len(self.axis_header_list)      
-    self.calculate_pixel_size()  
+    self.ndim = len(self.axis_header_list)
+    self.calculate_pixel_size()
     self.init_pos = 180 + 128 * self.ndim
     self.tile_list = map(lambda x: [], range(nproc))
 
@@ -357,7 +358,7 @@ class ucsfTool:
       self.cube_size *= self.axis_header_list[i]['TileSize']
     self.cube_float_size = self.cube_size * 4 # cube size in float point size
     self.unpack_cube_float = struct.Struct('>%df' % (self.cube_size)).unpack
-    
+
     # If memory is enough, load all the data first.
     # This will be significantly fast when multiprocessing is activated
     try:
@@ -370,7 +371,7 @@ class ucsfTool:
 
   # ---------------------------------------------------------------------------
   # Read file header
-  #  
+  #
   def read_file_header(self):
     if self.is_opened == 0:
       print_log('Error in ucsfTool:read_file_header()- file is not opened')
@@ -381,10 +382,10 @@ class ucsfTool:
     if temp[0:8] != 'UCSF NMR':
       print_log('Error in ucsfTool:read_file_header()- UCSF NMR tag not found')
       return 0
-      
+
     self.file_header['FileType'] = temp[0:8]
-    
-    try:  
+
+    try:
       self.file_header['DimCount'] = unpack_byte(temp[10])[0]
     except:
       print_log('Error in ucsfTool:read_file_header()- dimension is incorrect')
@@ -392,17 +393,17 @@ class ucsfTool:
 
     try:
       self.file_header['DataCompCount'] = unpack_byte(temp[11])[0]
-    except:   
+    except:
       print_log('Error in ucsfTool:read_file_header()- data component is incorrect')
-      return 0   
-      
+      return 0
+
     try:
       self.file_header['FileVersion'] = unpack_byte(temp[13])[0]
-    except:   
+    except:
       print_log('Error in ucsfTool:read_file_header()- file version is incorrect')
       return 0
-      
-    return 1  
+
+    return 1
   # ---------------------------------------------------------------------------
   # Read axis header
   #
@@ -417,16 +418,16 @@ class ucsfTool:
       for i in range(self.file_header['DimCount']):
         dah = self.dummy_axis_header()
         temp = self.file_object[0].read(128)
-        
+
         nuc = struct.unpack('6s',temp[0:6])[0]
         dah['AtomName'] = nuc.replace('\x00', '')
         dah['DataPointCount'] = unpack_int(temp[8:12])[0]
         dah['TileSize'] = unpack_int(temp[16:20])[0]
         dah['TileCount'] = dah['DataPointCount'] / dah['TileSize']
-        if dah['DataPointCount'] % dah['TileSize'] != 0: 
+        if dah['DataPointCount'] % dah['TileSize'] != 0:
           dah['TileCount'] = dah['TileCount'] + 1
-        dah['FillPointCount'] = dah['TileSize'] * dah['TileCount']  
-        dah['SpecFreq'] = unpack_float(temp[20:24])[0]      
+        dah['FillPointCount'] = dah['TileSize'] * dah['TileCount']
+        dah['SpecFreq'] = unpack_float(temp[20:24])[0]
         dah['SpecWidth'] = unpack_float(temp[24:28])[0]
         dah['Center'] = unpack_float(temp[28:32])[0]
         dah['MarginalPoint'] = dah['TileSize'] * dah['TileCount'] \
@@ -440,7 +441,7 @@ class ucsfTool:
                           / dah['SpecFreq'] / 2.0
         self.axis_header_list.append(dah)
       # convert to tuple for performance
-      self.axis_header_list = tuple(self.axis_header_list) 
+      self.axis_header_list = tuple(self.axis_header_list)
       #self.fd_divider = int(float(self.axis_header_list[0]['DataPointCount']) / \
       #                    float(self.nproc))+1
       self.fd_divider = float(self.axis_header_list[0]['DataPointCount']) / \
@@ -466,7 +467,7 @@ class ucsfTool:
       self.tile_size += (self.axis_header_list[i]['TileSize'],)
       self.tile_count += (self.axis_header_list[i]['TileCount'],)
       self.fill_point_count += (self.axis_header_list[i]['FillPointCount'],)
-    return 1           
+    return 1
   # ---------------------------------------------------------------------------
   # Print file information
   #
@@ -479,7 +480,7 @@ class ucsfTool:
     line = '%-20s' % ('axis')
     for i in range(self.ndim):
       ah = ahl[i]
-      line = line + '%11s%d' % ('w',i+1)	
+      line = line + '%11s%d' % ('w',i+1)
     print_log(line)
 
     line = '%-20s' % ('nucleus')
@@ -487,7 +488,7 @@ class ucsfTool:
       line = line + '%12s' % (ah['AtomName'])
     print_log(line)
 
-    for col, head in [['matrix size', 'DataPointCount'], 
+    for col, head in [['matrix size', 'DataPointCount'],
                       ['block size', 'TileSize']]:
       line = '%-20s' % (col)
       for ah in ahl:
@@ -537,7 +538,7 @@ class ucsfTool:
     if self.is_opened == 0:
       print_log('Error in ucsfTool:calculate_pixel_size()- file is not opened')
       return None
-      
+
     self.pixel_size = ()
     for i in range(self.ndim):
       self.pixel_size += (self.axis_header_list[i]['SpecWidth'] \
@@ -554,25 +555,25 @@ class ucsfTool:
         if i != 0:
           self.tile_list[fd].insert(0, self.tile_list[fd].pop(i))
         return self.tile_list[fd][0]
-      
+
     # start finding block position for the tile_indices
-    sum_size = 0 
+    sum_size = 0
     for i in range(self.ndim):
       mult_size = tile_indices[i]
       for j in range(i+1, self.ndim):
         mult_size *= self.tile_count[j]
       sum_size += mult_size
     tile_pos = self.init_pos + self.cube_float_size * sum_size
-    
+
     # read by tile
-    # could not find. read from file 
+    # could not find. read from file
     dt = self.dummy_tile()
     dt['TilePos'] = tile_indices
     dt['Values'] = [0] * self.cube_size
-    # not outlier 
+    # not outlier
     if tile_pos + self.cube_float_size < self.file_size+1 and tile_pos > 0:
       if self.cache_data == None:
-        self.file_object[fd].seek(tile_pos, 0)            
+        self.file_object[fd].seek(tile_pos, 0)
         temp = self.file_object[fd].read(self.cube_float_size)
       else:
         temp = self.cache_data[tile_pos:tile_pos+self.cube_float_size]
@@ -582,12 +583,12 @@ class ucsfTool:
 
     # make this tile top priority
     self.tile_list[fd].insert(0, dt)
-    
-    # if buffer overflowing, remove last one. 
+
+    # if buffer overflowing, remove last one.
     if len(self.tile_list[fd]) > tile_count_buffer:
       self.tile_list[fd].pop(tile_count_buffer)
     return dt
-      
+
   # ---------------------------------------------------------------------------
   # Grid to Tile and Index
   #
@@ -600,12 +601,12 @@ class ucsfTool:
     for i in range(self.ndim):
       tile_pt += (grid_pt[i] / self.axis_header_list[i]['TileSize'],)
       remain_pt += (grid_pt[i] % self.axis_header_list[i]['TileSize'],)
-    
+
     return (tile_pt, remain_pt)
-    
+
   # ---------------------------------------------------------------------------
   # Optimize tile size
-  #  
+  #
   def optimize_tile_size(self, axis_header_list):
     for i in range(self.ndim):
       axis_header_list[i]['TileSize'] = axis_header_list[i]['DataPointCount'] \
@@ -627,26 +628,26 @@ class ucsfTool:
       # reduce the largest dimension
       axis_header_list[max_dim]['TileSize'] \
                                     = axis_header_list[max_dim]['TileSize'] / 2
-      
+
     # readjust TileCount, FillPointCount, and write axis header
     for i in range(self.ndim):
       ts = axis_header_list[i]['TileSize']
       axis_header_list[i]['TileCount'] \
                                     = axis_header_list[i]['DataPointCount'] / ts
-      if axis_header_list[i]['DataPointCount'] % ts != 0: 
+      if axis_header_list[i]['DataPointCount'] % ts != 0:
         axis_header_list[i]['TileCount'] = axis_header_list[i]['TileCount'] + 1
       axis_header_list[i]['FillPointCount'] = ts \
                                               * axis_header_list[i]['TileCount']
-          
+
   # ---------------------------------------------------------------------------
   # Tile and Index to Grid
   #
   def tile_and_remain_indices_to_grid(self, tile_pt, index_pt):
     if self.is_opened == 0:
       print_log('Error in ucsfTool:tile_and_indices_to_grid()- file is not opened')
-      return None          
+      return None
     grid_pt = []
-    for i in range(self.ndim):  
+    for i in range(self.ndim):
       grid_pt.append(tile_pt[i] * self.axis_header_list[i]['TileSize'] \
                       + index_pt[i])
     return grid_pt
@@ -656,15 +657,15 @@ class ucsfTool:
   def remain_indices_to_remain_index(self, indices):
     if self.is_opened == 0:
       msg = 'Error in ucsfTool:remain_indices_to_remain_index()- '
-      msg = msg + 'file is not opened'    
+      msg = msg + 'file is not opened'
       print_log(msg)
-      return None          
+      return None
     sum_size = 0
     for i in range(self.ndim):
       mult_size = indices[i]
       for j in range(i+1, self.ndim):
         mult_size *= self.axis_header_list[j]['TileSize']
-      sum_size += mult_size  
+      sum_size += mult_size
     return sum_size
   # ---------------------------------------------------------------------------
   # Shift to grid
@@ -674,7 +675,7 @@ class ucsfTool:
     temp = ah['SpecWidth'] / float(ah['DataPointCount']) / ah['SpecFreq']
     temp2 = ah['Center'] + (ah['SpecWidth'] / ah['SpecFreq'] / 2.0)
     return int((temp2 - shift) / temp + 0.5)
-  # all dimension  
+  # all dimension
   def shifts_to_grids(self, shifts):
     grid_list = []
     for i in range(self.ndim):
@@ -717,7 +718,7 @@ class ucsfTool:
     #if self.cache_data == None:
     tile_data = self.read_tile_data(tile_indices, fd=fdidx)
     hts = tile_data['Values'][remain_index]
-    
+
     #else:
     #  return self.get_point_data(tile_indices, remain_index)
     return hts
@@ -744,7 +745,7 @@ class ucsfTool:
     if self.is_opened == 0:
       print_log('Error in ucsfTool:get_data_shifts()- file is not opened')
       return None
-    
+
     # shifts to grids
     grid_pt = ()
     for i in range(len(shift_pt)):
@@ -784,14 +785,14 @@ class ucsfTool:
       msg = msg + 'file is not opened'
       print_log(msg)
       return None
-    
+
     # shifts to grids
     grid_pt = []
     for i in range(len(shift_pt)):
       grid_pt.append(self.shift_to_grid(shift_pt[i], i+1))
     return self.get_interpolated_data(grid_pt)
   # ---------------------------------------------------------------------------
-  # Interpolation for peaks  
+  # Interpolation for peaks
   def get_interpolated_data_by_peaks(self, peaks):
     adj_peaks, adj_hts = [], []
     for i in range(len(peaks)):
@@ -818,25 +819,25 @@ class ucsfTool:
   def is_local_maxima(self, grid_pt, grid_buffers, sign = 1, ref_ht = None):
     pt_list = []
     if len(grid_pt) == 2:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0], 
+      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
                                    grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1], 
+                             range(grid_pt[1]-grid_buffers[1],
                                    grid_pt[1]+grid_buffers[1]+1))
     elif len(grid_pt) == 3:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0], 
+      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
                                    grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1], 
+                             range(grid_pt[1]-grid_buffers[1],
                                    grid_pt[1]+grid_buffers[1]+1),
-                             range(grid_pt[2]-grid_buffers[2], 
+                             range(grid_pt[2]-grid_buffers[2],
                                    grid_pt[2]+grid_buffers[2]+1))
     elif len(grid_pt) == 4:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0], 
+      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
                                    grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1], 
+                             range(grid_pt[1]-grid_buffers[1],
                                    grid_pt[1]+grid_buffers[1]+1),
-                             range(grid_pt[2]-grid_buffers[2], 
+                             range(grid_pt[2]-grid_buffers[2],
                                    grid_pt[2]+grid_buffers[2]+1),
-                             range(grid_pt[3]-grid_buffers[3], 
+                             range(grid_pt[3]-grid_buffers[3],
                                    grid_pt[3]+grid_buffers[3]+1))
     pt_list = tuple(it)
     if ref_ht == None:  std_ht = self.get_data(grid_pt)
@@ -848,11 +849,11 @@ class ucsfTool:
         or (abs(temp_ht) > abs(std_ht) and sign == 0):
         return False, std_ht
     return True, std_ht
-    
+
   # ---------------------------------------------------------------------------
   # Check if this shift is the maximum
-  #    
-  def is_local_maxima_by_shifts(self, shift_pt, shift_buffers, sign = 1, 
+  #
+  def is_local_maxima_by_shifts(self, shift_pt, shift_buffers, sign = 1,
                                       ref_ht = None):
     grid_pt = []
     grid_buffers = []
@@ -861,7 +862,7 @@ class ucsfTool:
       grid_pt.append(self.shift_to_grid(shift_pt[i], i+1))
     return self.is_local_maxima(grid_pt, grid_buffers, sign, ref_ht)
   # ---------------------------------------------------------------------------
-  # 
+  #
   # Use slope to cut the value
   def filter_peaks_by_slope(self, grid_peaks, heights, min_slope):
     pass
@@ -875,7 +876,7 @@ class ucsfTool:
         peaks2.append(grid_peaks[i])
         heights2.append(hts)
     return peaks2, heights2
-  
+
   def filter_peaks_by_count(self, grid_peaks, heights, max_count):
     temp_list = []
     for i in range(len(grid_peaks)):
@@ -896,7 +897,7 @@ class ucsfTool:
     ahl = self.axis_header_list
     grid_restraint = []
     for i in range(len(ahl)):
-        grid_restraint.append(list(map(lambda x: x, 
+        grid_restraint.append(list(map(lambda x: x,
                                         range(ahl[i]['DataPointCount']))))
     if shift_restraint == None:
       return grid_restraint
@@ -913,8 +914,8 @@ class ucsfTool:
     return grid_restraint
   # ---------------------------------------------------------------------------
   # Find peaks in entire spectrum
-  def find_peaks(self, noise_level, grid_buffers, sign=1, 
-                  shift_restraint=None, shift_grid_buffers=None, 
+  def find_peaks(self, noise_level, grid_buffers, sign=1,
+                  shift_restraint=None, shift_grid_buffers=None,
                   max_count=None, verbose=True):
     ahl = self.axis_header_list
 
@@ -931,7 +932,7 @@ class ucsfTool:
     else:
       for i in range(len(ahl)):
           range_list.append(range(ahl[i]['DataPointCount']))
-              
+
     if verbose and self.nproc != 1:
       print_log(datetime.datetime.now())
       print_log('Creating multiprocesses')
@@ -952,7 +953,7 @@ class ucsfTool:
                                 range_list[3])
       it_list.append(it)
 
-    grid_peaks, heights = [], []   
+    grid_peaks, heights = [], []
     process_list = []
     q = multiprocessing.Queue()
     if max_count == None:
@@ -967,7 +968,7 @@ class ucsfTool:
         permute_count *= len(range_list[j])
       if verbose:
         print_log('Process %d: %d permutes' % (i+1, permute_count))
-      t = multiprocessing.Process(target=self.process_find_peaks, 
+      t = multiprocessing.Process(target=self.process_find_peaks,
                           args=[it, permute_count, noise_level, grid_buffers,
                           sign, i, grid_restraint, q, verbose])
       t.start()
@@ -984,7 +985,7 @@ class ucsfTool:
       print_log('Find peaks: %d peaks' % (len(grid_peaks)))
     return grid_peaks, heights
 
-  def process_find_peaks(self, it, permute_count, noise_level, grid_buffers, 
+  def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
                         sign, pnum, grid_restraint, q, verbose):
 
     chunk_size = 100000
@@ -999,7 +1000,7 @@ class ucsfTool:
           print_log(datetime.datetime.now())
           print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
       pts = tuple(itertools.islice(it, chunk_size))
-      pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign, 
+      pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
                                 pnum, grid_restraint)
       peaks += pks
       heights += hts
@@ -1007,7 +1008,7 @@ class ucsfTool:
     return
   # ---------------------------------------------------------------------------
   # Find peaks in entire spectrum
-  """  def find_peaks(self, noise_level, grid_buffers, sign=1, 
+  """  def find_peaks(self, noise_level, grid_buffers, sign=1,
                 shift_restraint=None, shift_grid_buffers=None, verbose=False):
     ahl = self.axis_header_list
 
@@ -1033,14 +1034,14 @@ class ucsfTool:
       it = itertools.product(range_list[2], range_list[1], range_list[2], \
                               range_list[3])
 
-    grid_peaks, heights = [], []   
+    grid_peaks, heights = [], []
     chunk_size = 100000
     permute_count = 1
     for i in range(0, len(ahl)):
       permute_count *= len(range_list[i])
 
     chunk_count = int(permute_count / chunk_size) + 1
-    
+
     cur_percent = -1
     for i in range(chunk_count):
       if verbose:
@@ -1051,12 +1052,12 @@ class ucsfTool:
           print 'Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10)
 
       pts = tuple(itertools.islice(it, chunk_size))
-      temp_peaks, temp_heights = self.find_peaks_per_node(pts, noise_level, 
+      temp_peaks, temp_heights = self.find_peaks_per_node(pts, noise_level,
               grid_buffers, sign, grid_restraint)
       grid_peaks += temp_peaks
       heights += temp_heights
     return grid_peaks, heights"""
-  
+
   def find_peaks_per_node(self, pts, noise_level, grid_buffers, sign, pnum,
                   grid_restraint=None):
     grid_peaks, heights = [], []
@@ -1075,9 +1076,9 @@ class ucsfTool:
 
       if (temp_hts < noise_level and sign == 1) or \
          (temp_hts > noise_level and sign == -1) or \
-         (temp_hts * sign < 0): 
+         (temp_hts * sign < 0):
         continue
-      
+
       if tf:
         diff = 0
         for j in range(len(grid_buffers)):
@@ -1086,7 +1087,7 @@ class ucsfTool:
       # check if it is local maxima in 1D->2D->3D->4D
       for j in range(len(grid_buffers)):
         tf, hts = self.is_local_maxima(grid_pt,
-                    grid_buffers[0:1+j] + zl[j], 
+                    grid_buffers[0:1+j] + zl[j],
                     sign, ref_ht = temp_hts)
         if not tf:
           break
@@ -1107,13 +1108,13 @@ class ucsfTool:
 
   # ---------------------------------------------------------------------------
   # Find peaks around given grid points by peak simulation and fitting
-  # mode: gaussian, lorentzian, pseudovoigt_50 (50 is 50% gaussian-mix)   
+  # mode: gaussian, lorentzian, pseudovoigt_50 (50 is 50% gaussian-mix)
   def find_fit_peaks(self, grid_pt, grid_buffers, sign=1, mode='gaussian'):
      pass
   # ---------------------------------------------------------------------------
   # Find peaks around given shifts by peak simulation and fitting
-  #    
-  def find_fit_peaks_by_shifts(self, shift_pt, shift_buffers, sign=1, 
+  #
+  def find_fit_peaks_by_shifts(self, shift_pt, shift_buffers, sign=1,
                                 mode='gaussian'):
     grid_pt = []
     grid_buffers = []
@@ -1123,9 +1124,9 @@ class ucsfTool:
     return self.find_fit_peaks(grid_pt, grid_buffers, sign, mode)
   # ---------------------------------------------------------------------------
   # Automate noise estimation, peak picking, interpolation and saving
-  def auto_pick_peaks(self, out_filename=None, grid_buffers=None, sign=0, 
-                    max_count=None, threshold=None, noise_filter = 8., 
-                    shift_restraint = None, shift_grid_buffers=None, 
+  def auto_pick_peaks(self, out_filename=None, grid_buffers=None, sign=0,
+                    max_count=None, threshold=None, noise_filter = 8.,
+                    shift_restraint = None, shift_grid_buffers=None,
                     write_peaks=True, verbose=False):
     noise = self.sample_noise(sample_count=100)
     if threshold == None:
@@ -1182,27 +1183,27 @@ class ucsfTool:
         for i in range(1, len(ahl)+1):
           idx = self.shift_to_grid(float(sp[i]), i)
           spt.append(idx)
-  
+
         if len(spt) == 2:
-          it = itertools.product(range(spt[0]-grid_buffers[0], 
+          it = itertools.product(range(spt[0]-grid_buffers[0],
                                        spt[0]+grid_buffers[0]+1),
-                                 range(spt[1]-grid_buffers[1], 
+                                 range(spt[1]-grid_buffers[1],
                                        spt[1]+grid_buffers[1]+1))
         elif len(spt) == 3:
-          it = itertools.product(range(spt[0]-grid_buffers[0], 
+          it = itertools.product(range(spt[0]-grid_buffers[0],
                                        spt[0]+grid_buffers[0]+1),
-                                 range(spt[1]-grid_buffers[1], 
+                                 range(spt[1]-grid_buffers[1],
                                        spt[1]+grid_buffers[1]+1),
-                                 range(spt[2]-grid_buffers[2], 
+                                 range(spt[2]-grid_buffers[2],
                                        spt[2]+grid_buffers[2]+1))
         elif len(spt) == 4:
-          it = itertools.product(range(spt[0]-grid_buffers[0], 
+          it = itertools.product(range(spt[0]-grid_buffers[0],
                                        spt[0]+grid_buffers[0]+1),
-                                 range(spt[1]-grid_buffers[1], 
+                                 range(spt[1]-grid_buffers[1],
                                        spt[1]+grid_buffers[1]+1),
-                                 range(spt[2]-grid_buffers[2], 
+                                 range(spt[2]-grid_buffers[2],
                                        spt[2]+grid_buffers[2]+1),
-                                 range(spt[3]-grid_buffers[3], 
+                                 range(spt[3]-grid_buffers[3],
                                        spt[3]+grid_buffers[3]+1))
         spts.append(list(it))
       except:
@@ -1246,36 +1247,36 @@ class ucsfTool:
     use_logo = """
       ucsfTool.write_transform('file_to_write.ucsf',
                           'transform_mode',   # mult, comb, subt, pow, abs
-                          transform_factor,   # e.g. 
-                                              # pow(transform_factor, 
+                          transform_factor,   # e.g.
+                                              # pow(transform_factor,
                                               #     transform_factor2)
-                          transform_factor2,  # ignored if not power.                          
+                          transform_factor2,  # ignored if not power.
                                               # e.g. 'pow', 2, NC_proc value
                           overwrite)          # overwrite 0 or 1
     """
     if self.is_opened == 0:
       print_log('Error in ucsfTool:write_transform()- file is not opened')
       return None
-      
+
     if overwrite == 0 and os.path.exists(out_filename):
       print_log('Error in ucsfTool:write_transform()- output file already exists')
       print_log(use_logo)
-      return 0      
-        
-    try:  
+      return 0
+
+    try:
       trans_mode = ['mult','comb','subt','pow','abs'].index(transform_mode)
     except:
       print_log('Error in ucsfTool:write_transform()- incorrect transform mode')
       print_log(use_logo)
-      return 0      
+      return 0
 
     f = open(out_filename, 'wb')
-    # write header    
+    # write header
     self.write_ucsf_file_header(f, self.file_header)
     # write axis header
     for i in range(self.ndim):
       self.write_ucsf_axis_header(f, self.ndim)
-    # write data  
+    # write data
     data_count = (self.file_size - (180+128*self.ndim) ) / 4
     self.file_object[0].seek(180+128*self.ndim)
     for i in range(data_count):
@@ -1301,7 +1302,7 @@ class ucsfTool:
   def write_projection(self, out_filename, proj_dim, proj_mode = 'avg', overwrite=0):
     use_logo = """
       ucsfTool.write_projection('file_to_write.ucsf',
-                          dimension,          # dimension number to project 
+                          dimension,          # dimension number to project
                           proj_mode='avg',    # 'avg', 'sum', 'min', 'max'
                                               # 'pos_avg', 'neg_avg'....
                                               # (e.g. 1,2, or 3)
@@ -1314,9 +1315,9 @@ class ucsfTool:
     if overwrite == 0 and os.path.exists(out_filename):
       print_log('Error in ucsfTool:write_projection()- output file already exists')
       print_log(use_logo)
-      return 0      
+      return 0
 
-    try:  
+    try:
       p_mode = ['avg','sum','min','max',
                 'pos_avg','pos_sum','pos_min','pos_max',
                 'neg_avg','neg_sum','neg_min','neg_max',].index(proj_mode)
@@ -1329,9 +1330,9 @@ class ucsfTool:
       else:
         print_log('Error in ucsfTool:write_projection()- incorrect projection mode')
         print_log(use_logo)
-        return 0      
+        return 0
 
-    # write header    
+    # write header
     file_header = self.copy_file_header(self.file_header)
     if file_header['DimCount'] < 3:
       msg = 'Error in ucsfTool:write_projection()- current ucsf dimension '
@@ -1345,11 +1346,11 @@ class ucsfTool:
       print_log(msg)
       print_log(use_logo)
       return 0
-      
+
     f = open(out_filename, 'wb')
     file_header['DimCount'] = file_header['DimCount'] - 1
     self.write_ucsf_file_header(f, file_header)
-    
+
     # fill axis header
     axis_header_list = [] # this is new axis list excluding proj dim
     proj_axis_header = self.axis_header_list[proj_dim-1]
@@ -1357,7 +1358,7 @@ class ucsfTool:
       if i == proj_dim-1: continue
       ah = self.copy_axis_header(self.axis_header_list[i])
       axis_header_list.append(ah)
-      
+
     # estimate new tile size
     self.optimize_tile_size(axis_header_list)
 
@@ -1367,8 +1368,8 @@ class ucsfTool:
     for i in range(self.ndim):
       self.write_ucsf_axis_header(f, axis_header_list[i])
       cube_count = cube_count * axis_header_list[i]['TileCount']
-      cube_size = cube_size * axis_header_list[i]['TileSize']      
-    
+      cube_size = cube_size * axis_header_list[i]['TileSize']
+
     # write data
     for i in range(cube_count):
       cube_grid_pt = [0] * self.ndim
@@ -1390,7 +1391,7 @@ class ucsfTool:
         for k in range(self.ndim):
           grid_pt[k] = cube_grid_pt[k] * axis_header_list[k]['TileSize'] \
                       + part_grid_pt[k]
-        #print grid_pt  
+        #print grid_pt
         grid_pt.insert(proj_dim-1,0)
         # add increment through project dimension
         value_list = []
@@ -1406,7 +1407,7 @@ class ucsfTool:
         if len(value_list) == 0:
           value_list.append(0)
         if p_mode == 0:  # avg
-            val = sum(value_list) / float(len(value_list))  
+            val = sum(value_list) / float(len(value_list))
         elif p_mode == 1: val = sum(value_list)                 # sum
         elif p_mode == 2: val = min(value_list)                 # min
         elif p_mode == 3 or p_mode == -1: val = max(value_list)     # max
@@ -1416,12 +1417,12 @@ class ucsfTool:
 
   # ---------------------------------------------------------------------------
   # Write 2d planes from 3d cube
-  # 
+  #
   def write_planes(self, out_prefix, dim=0, reverse=1, init=1, gap = 1, \
                     overwrite=0):
     use_logo = """
       ucsfTool.write_planes('prefix',         # prefix_0.ucsf, prefix_1.ucsf ....
-                          dim=0,              # dimension number to pick 
+                          dim=0,              # dimension number to pick
                                               # (e.g. 1,2, or 3, and 0 is auto)
                           reverse=1,          # reverse mode for the dimension
                                               # (e.g. 0: no reverse, 1: reverse)
@@ -1432,11 +1433,11 @@ class ucsfTool:
     if self.is_opened == 0:
       print_log('Error in ucsfTool:write_planes()- file is not opened')
       return None
-      
+
     if dim < 0 or dim > self.ndim:
       print_log('Error in ucsfTool:write_planes()- incorrect dimension')
       print_log(use_logo)
-      return 0      
+      return 0
 
     # set header
     # file header
@@ -1448,7 +1449,7 @@ class ucsfTool:
       print_log(use_logo)
       return 0
     file_header['DimCount'] = file_header['DimCount'] - 1
-    
+
     # dimension process
     split_dim = dim
     # Non general atom name
@@ -1466,7 +1467,7 @@ class ucsfTool:
         if size2 < size:
           size = size2
           split_dim = i+1
-          
+
     # fill axis header
     axis_header_list = [] # this is new axis list excluding proj dim
     split_axis_header = self.axis_header_list[split_dim-1]
@@ -1474,16 +1475,16 @@ class ucsfTool:
       if i == split_dim-1: continue
       ah = self.copy_axis_header(self.axis_header_list[i])
       axis_header_list.append(ah)
-    
+
     # estimate new tile size
     self.optimize_tile_size(axis_header_list)
-    
+
     cube_count = 1
     cube_size = 1
     for i in range(self.ndim):
       cube_count = cube_count * axis_header_list[i]['TileCount']
-      cube_size = cube_size * axis_header_list[i]['TileSize']       
-          
+      cube_size = cube_size * axis_header_list[i]['TileSize']
+
     # prepare file names
     # check if user input is decimal
     try:
@@ -1495,7 +1496,7 @@ class ucsfTool:
     out_files = []
     max_num = gap * self.axis_header_list[split_dim-1]['DataPointCount'] + init
     for i in range(self.axis_header_list[split_dim-1]['DataPointCount']):
-      if int_mode == 1: 
+      if int_mode == 1:
         tp = gap*i + init
         if max_num < 10 or max_num >= 100000:
           out_files.append('%s_%d.ucsf' % (out_prefix, tp))
@@ -1505,9 +1506,9 @@ class ucsfTool:
           out_files.append('%s_%03d.ucsf' % (out_prefix, tp))
         elif max_num < 10000:
           out_files.append('%s_%04d.ucsf' % (out_prefix, tp))
-        elif max_num < 100000:          
+        elif max_num < 100000:
           out_files.append('%s_%05d.ucsf' % (out_prefix, tp))
-      else:             
+      else:
         tp = gap(float(i)) + init
         if max_num < 10:
           out_files.append('%s_%05.3f.ucsf' % (out_prefix, tp))
@@ -1524,20 +1525,20 @@ class ucsfTool:
       if overwrite == 0 and os.path.exists(out_files[-1]):
         print_log('Error in ucsfTool:write_planes()- output file already exists')
         print_log(use_logo)
-        return 0      
-        
+        return 0
+
     for i in range(len(out_files)):
       out_filename = out_files[i]
 
       f = open(out_filename, 'wb')
-      
-      # write header      
+
+      # write header
       self.write_ucsf_file_header(f, file_header)
-      
+
       # and write axis header
       for j in range(len(axis_header_list)):
         self.write_ucsf_axis_header(f, axis_header_list[j])
-    
+
       # write data
       for j in range(cube_count):
         cube_grid_pt = [0] * len(axis_header_list)
@@ -1559,7 +1560,7 @@ class ucsfTool:
           for l in range(len(axis_header_list)):
             grid_pt[l] = cube_grid_pt[l] * axis_header_list[l]['TileSize'] \
                         + part_grid_pt[l]
-          #print grid_pt  
+          #print grid_pt
           grid_pt.insert(split_dim-1,0)
           # add increment through project dimension
           if reverse == 1:  grid_pt[split_dim-1] = i
@@ -1571,7 +1572,7 @@ class ucsfTool:
 
   # ---------------------------------------------------------------------------
   # Write axis swapped
-  # 
+  #
   def write_swapped_axis(self, out_filename, dim1, dim2, overwrite = 0):
     use_logo = """
       ucsfTool.write_swapped_axis('filename.ucsf', # output
@@ -1582,7 +1583,7 @@ class ucsfTool:
     if self.is_opened == 0:
       print_log('Error in ucsfTool:write_swapped_axis()- file is not opened')
       return None
-      
+
     if dim1 < 1 or dim1 > len(self.axis_header_list) or dim2 < 1 \
                           or dim2 > len(self.axis_header_list) or dim1 == dim2:
       print_log('Error in ucsfTool:write_swapped_axis()- incorrect dimension')
@@ -1592,16 +1593,16 @@ class ucsfTool:
     if overwrite == 0 and os.path.exists(out_filename):
       print_log('Error in ucsfTool:write_swapped_axis()- output file already exists')
       print_log(use_logo)
-      return 0      
-      
+      return 0
+
     # set header
     # file header
     file_header = self.copy_file_header(self.file_header)
-    
+
     # fill axis header
     axis_header_list = []
     for i in range(len(self.axis_header_list)):
-      if i != dim1-1 and i != dim2-1: 
+      if i != dim1-1 and i != dim2-1:
         axis_header_list.append(self.copy_axis_header(self.axis_header_list[i]))
       elif i == dim1-1:
         axis_header_list.append(
@@ -1609,22 +1610,22 @@ class ucsfTool:
       else:
         axis_header_list.append(
                           self.copy_axis_header(self.axis_header_list[dim1-1]))
-    
+
     cube_count = 1
     cube_size = 1
     for i in range(len(axis_header_list)):
       cube_count = cube_count * axis_header_list[i]['TileCount']
       cube_size = cube_size * axis_header_list[i]['TileSize']
-      
+
     f = open(out_filename, 'wb')
-    
-    # write header      
+
+    # write header
     self.write_ucsf_file_header(f, file_header)
-    
+
     # and write axis header
     for i in range(len(axis_header_list)):
       self.write_ucsf_axis_header(f, axis_header_list[i])
-  
+
     # write data
     for i in range(cube_count):
       cube_grid_pt = [0] * len(axis_header_list)
@@ -1633,7 +1634,7 @@ class ucsfTool:
         dim_idx = len(axis_header_list)-j-1
         cube_grid_pt[dim_idx] = pos % axis_header_list[dim_idx]['TileCount']
         pos = pos / axis_header_list[dim_idx]['TileCount']
-        
+
       for j in range(cube_size):
         # absolute grid point
         grid_pt = [0] * len(axis_header_list) # this is absolute position
@@ -1652,37 +1653,37 @@ class ucsfTool:
         swap_grid_pt[dim2-1] = grid_pt[dim1-1]
         val = self.get_data(swap_grid_pt)
         f.write(struct.pack('>f', val))
-        
+
     f.close()
-  
+
   # ---------------------------------------------------------------------------
   # Write shifted
-  # 
+  #
   def write_shifted(self, out_filename, shift_dim, amount, unit='ppm', \
                     overwrite=0):
     use_logo = """
       ucsfTool.write_shifted('filename.ucsf', # output
-                          shift_dim,          # dimension to shift 
+                          shift_dim,          # dimension to shift
                                               # (e.g 1, 2, or 3)
                           amount,             # value to shift. By summation
                           unit='ppm',         # "ppm", "hz", or "pt"
-                          overwrite=0)        # overwrite 0 or 1                          
+                          overwrite=0)        # overwrite 0 or 1
     """
-    
+
     if self.is_opened == 0:
       print_log('Error in ucsfTool:write_shifted()- file is not opened')
       return None
-      
+
     if shift_dim < 1 or shift_dim > len(self.axis_header_list):
       print_log('Error in ucsfTool:write_shifted()- incorrect dimension')
       print_log(use_logo)
       return 0
-      
+
     if overwrite == 0 and os.path.exists(out_filename):
       print_log('Error in ucsfTool:write_shifted()- output file already exists')
       print_log(use_logo)
-      return 0            
-      
+      return 0
+
     if unit.lower() != 'ppm' and unit.lower() != 'hz' and unit.lower() != 'pt':
       print_log('Error in ucsfTool:write_shifted()- incorrect unit')
       print_log(use_logo)
@@ -1690,17 +1691,17 @@ class ucsfTool:
 
     # set header
     f = open(out_filename, 'wb')
-    
-    # write header      
+
+    # write header
     self.write_ucsf_file_header(f, self.file_header)
-    
+
     # and write axis header
     for i in range(len(self.axis_header_list)):
       ah = self.copy_axis_header(self.axis_header_list[i])
-      
+
       # do modification- Center (ppm)
       if i == shift_dim-1:
-        if unit.lower() == 'ppm': 
+        if unit.lower() == 'ppm':
           ah['Center'] = ah['Center'] + amount
         elif unit.lower() == 'hz':
           ah['Center'] = ah['Center'] + amount / ah['SpecFreq']
@@ -1708,7 +1709,7 @@ class ucsfTool:
           ah['Center'] = ah['Center'] + float(amount) * ah['SpecWidth'] \
                         / float(ah['DataPointCount']-1)
       self.write_ucsf_axis_header(f, ah)
-    
+
     # write data
     data_count = (self.file_size - (180+128*len(self.axis_header_list)) ) / 4
     self.file_object[0].seek(180+128*len(self.axis_header_list))
@@ -1716,16 +1717,16 @@ class ucsfTool:
       temp = self.file_object[0].read(4)
       f.write(temp)
     f.close()
-    
+
   # ---------------------------------------------------------------------------
   # Write concatenated
-  # 
+  #
   #def write_concatenated(self, ref_file_name):
   #
-  
+
   # ---------------------------------------------------------------------------
   # Write header
-  # 
+  #
   def write_ucsf_file_header(self, file_object, file_header):
     f = file_object
     f.seek(0)
@@ -1733,21 +1734,21 @@ class ucsfTool:
     f.write(struct.pack('B',  file_header['DimCount']))
     f.write(struct.pack('2B', file_header['DataCompCount'], 0))
     f.write(struct.pack('B',  file_header['FileVersion']))      # 14 bytes
-    # 180 byte: header + 166 bytes      
+    # 180 byte: header + 166 bytes
     import datetime
-    dstr = datetime.datetime.now().strftime('%Y-%m-%d')      
+    dstr = datetime.datetime.now().strftime('%Y-%m-%d')
     f.write(struct.pack('30s', "Woonghee's ucsftool %s" % (dstr)))
     for i in range(2): # 136 bytes
       f.write(struct.pack('8d',0,0,0,0,0,0,0,0))
     f.write(struct.pack('d',0)) # cap 180 bytes
-  
+
   # ---------------------------------------------------------------------------
   # Write axis header
-  #   
+  #
   def write_ucsf_axis_header(self, file_object, axis_header):
     f = file_object
     f.write(struct.pack('6s', axis_header['AtomName']))
-    f.write(struct.pack('2B', 0,0))    
+    f.write(struct.pack('2B', 0,0))
     f.write(struct.pack('>I', axis_header['DataPointCount']))
     f.write(struct.pack('4B', 0,0,0,0))
     f.write(struct.pack('>I', axis_header['TileSize']))
@@ -1760,9 +1761,9 @@ def auto_picking(in_filename, out_filename=None, grid_buffers=None, \
                     noise_filter=8, sign=0, max_count=None, \
                     threshold=None, nproc = 2, verbose=False):
   print_log("""
-  Automated Peak Picking by ucsfTool 
+  Automated Peak Picking by ucsfTool
   by Woonghee Lee (whlee@nmrfam.wisc.edu)
-  
+
   """)
   import datetime
   print_log(datetime.datetime.now())
@@ -1816,7 +1817,7 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None, \
     out_filename= pre + '.list'
   print_log('Picking peaks: ' + out_filename)
   ut.ucsf_open(in_filename, nproc=nproc)
-  peaks, heights = ut.auto_pick_peaks(out_filename, 
+  peaks, heights = ut.auto_pick_peaks(out_filename,
                                     shift_restraint=restraints,
                                     shift_grid_buffers=[4, 4, 4],
                                     max_count=max_count,

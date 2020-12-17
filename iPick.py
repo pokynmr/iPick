@@ -36,6 +36,8 @@ from __future__ import print_function
 import os
 import sys
 import argparse
+import time
+import tempfile
 
 if sys.version_info[0] == 2:
     import ucsftool
@@ -49,6 +51,7 @@ DESC = '\nIntegrated UCSF Peak Picker v0.1\n\t\
 
 NMRGLUE_PATH = 'nmrglue-0.7'
 UCSFTOOL_PATH = '.'
+LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')
 
 def print_log(*args):
     msg = ''
@@ -57,7 +60,7 @@ def print_log(*args):
             msg += str(s)
         except:
             msg += '! Could not convert to String'
-    f = open('/tmp/process.log', 'a')
+    f = open(LOG_FILE, 'a')
     f.write(msg + '\n')
     f.close()
     print(*args)
@@ -249,6 +252,12 @@ def main():
     ut.write_sparky_peaks(out_filename, sort_peaks, sort_hts)
     print_log('%d peaks written in %s' % (peak_count, out_filename))
     ut.ucsf_close()
+
+    # this is to be checked by other modules that this program is done
+    time.sleep(0.5)
+    IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
+    done_file = open(os.path.join(IPICK_PATH, 'done'), 'w')
+    done_file.close()
 
 
 if __name__ == '__main__':

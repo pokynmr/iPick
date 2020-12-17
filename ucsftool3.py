@@ -81,6 +81,7 @@ import itertools
 import datetime
 import multiprocessing
 import math
+import tempfile
 import random
 random.seed()
 
@@ -99,7 +100,7 @@ def print_log(*args):
             msg += str(s)
         except:
             msg += '! Could not convert to String'
-    f = open('/tmp/process.log', 'a')
+    f = open(os.path.join(tempfile.gettempdir(), 'process.log'), 'a')
     f.write(msg + '\n')
     f.close()
     print(*args)

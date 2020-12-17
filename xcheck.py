@@ -22,6 +22,7 @@ import sputil
 import tkutil
 from itertools import combinations
 import collections
+import math
 
 #from matplotlib import use as matplotlib_use
 #matplotlib_use('TkAgg')
@@ -36,7 +37,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.specs_peaks = []
 
     self.session = session
-    tkutil.Dialog.__init__(self, session.tk, 'Resonance Cross-validation')
+    tkutil.Dialog.__init__(self, session.tk, 'Resonance Cross-Validation')
 
    # xcheck_label = tk.Label(self.top, text="X-Check Validation Filtering Module", font=20)
    # xcheck_label.pack(side='top', fill='both', expand=1, pady=15)
@@ -149,9 +150,37 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(checkbox_note_append, 'If checked, the result will be appended to the Note property of each peak. If unchecked, the Note will be OVERWRITTEN!')
 
 
+# separator
+    sep = tk.Frame(btmfrm, height=2, bd=1, relief="ridge")
+    sep.pack(fill="both", padx=5, pady=(10,5), side='top')
+
+
+# histogram bins
+
+    bin_font = tkFont.Font(size=11)
+    bin_label = tk.Label(btmfrm, text="Histogram Bins:", font=bin_font)
+    bin_label.pack(side='top', anchor='w', pady=(5,3))
+    tkutil.create_hint(bin_label, 'These bins are used in generating the histograms')
+
+    bins_frm = tk.Frame(btmfrm)
+    bins_frm.pack(side='top', fill='both', expand=1, pady=(0,10))
+
+    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=4, initial='0.1')
+    self.bin_H.frame.pack(side='left', padx=(20,10))
+    tkutil.create_hint(self.bin_H.frame, 'Bin steps for H histogram')
+
+    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='1')
+    self.bin_C.frame.pack(side='left', padx=(5,10))
+    tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
+
+    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=4, initial='1')
+    self.bin_N.frame.pack(side='left', padx=(5,10))
+    tkutil.create_hint(self.bin_N.frame, 'Bin steps for N histogram')
+
+
 # run button & status
 
-    xcheck_button = tk.Button(buttonsfrm1, text='Run Cross-validation', command=self.run_xcheck_button)
+    xcheck_button = tk.Button(buttonsfrm1, text='Run Cross-Validation', command=self.run_xcheck_button)
     xcheck_button.pack(side='left', padx=1)
     tkutil.create_hint(xcheck_button, 'Runs the cross validation using the settings above')
 
@@ -159,7 +188,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     hist_button.pack(side='left')
     tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances. The above settings do NOT effect this')
 
-    delete_button = tk.Button(buttonsfrm2, text='Remove Noise Peaks', command=self.remove_peaks)
+    delete_button = tk.Button(buttonsfrm2, text='Remove Lone Peaks', command=self.remove_peaks)
     delete_button.pack(side='left', padx=1)
     tkutil.create_hint(delete_button, 'Removes the peaks that have no corresponding peaks in other experiments. You need to run the cross validation first.')
 
@@ -393,20 +422,40 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
             if self.specs_nuclei[spec][nuclei] == '1H':
                 this_hist = H_hist
+                bin_step = float(self.bin_H.variable.get())
             elif self.specs_nuclei[spec][nuclei] == '15N':
                 this_hist = N_hist
+                bin_step = float(self.bin_N.variable.get())
             elif self.specs_nuclei[spec][nuclei] == '13C':
                 this_hist = C_hist
+                bin_step = float(self.bin_C.variable.get())
 
+#            for peak in self.specs_peaks[spec]:
+#                this_freq = int(peak.frequency[nuclei])
+#
+#                for this_bin in [this_freq-1, this_freq, this_freq+1]:
+#                    if this_hist.has_key(this_bin):
+#                        this_hist[this_bin] = this_hist[this_bin] + 1
+#                    else:
+#                        this_hist[this_bin] = 1
+
+            round_digit = int(-1 * math.floor(math.log10(bin_step)))
+            # finds the number of digits to round of
+            # gives 1 for 0.1 or 0.5
+            # gives -1 for 10 or 13
+            # gives -2 for 100 or 124
+            # gives 2 for 0.01 or 0.06477
 
             for peak in self.specs_peaks[spec]:
-                this_freq = int(peak.frequency[nuclei])
+                this_freq = round(peak.frequency[nuclei], round_digit)
+                upper_freq = round(this_freq+bin_step, round_digit)
+                lower_freq = round(this_freq-bin_step, round_digit)
 
-                for bin in [this_freq-1, this_freq, this_freq+1]:
-                    if this_hist.has_key(bin):
-                        this_hist[bin] = this_hist[bin] + 1
+                for this_bin in [lower_freq, this_freq, upper_freq]:
+                    if this_hist.has_key(this_bin):
+                        this_hist[this_bin] = this_hist[this_bin] + 1
                     else:
-                        this_hist[bin] = 1
+                        this_hist[this_bin] = 1
 
 
     self.status.config(text="Status: Done!")
@@ -414,7 +463,10 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     d = hist_dialog(self.session)
     d.show_window(1)
-    d.show_histograms(H_hist, N_hist, C_hist)
+    d.show_histograms(H_hist, N_hist, C_hist,
+                        float(self.bin_H.variable.get()),
+                        float(self.bin_N.variable.get()),
+                        float(self.bin_C.variable.get()))
 
 
 # ---------------------------------------------------------------------------
@@ -460,7 +512,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(hist_button, 'Select one or more peaks in the experiment and click this button to show them on the histograms')
 
 
-  def show_histograms(self, H_hist, N_hist, C_hist):
+  def show_histograms(self, H_hist, N_hist, C_hist, H_bin, N_bin, C_bin):
     print('\nH:')
     print(H_hist)
     print('\nN:')
@@ -472,19 +524,18 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.fig.set_facecolor("white")
     subplots_adjust(left=0.04, bottom=0.1, right=0.98, top=0.90, wspace=0.14)
 
-
-    self.axes[0].bar(list(H_hist.keys()), H_hist.values(), color='#3dff3d')
+    self.axes[0].bar(list(H_hist.keys()), H_hist.values(), color='#3dff3d', width=H_bin)
     self.axes[0].set_title ("H", fontsize=16)
     self.axes[0].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
 
-    self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff')
+    self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
     self.axes[1].set_title ("N", fontsize=16)
     self.axes[1].set_ylabel("Number of occurrences", fontsize=12)
     #self.axes[1].set_ylabel("Counts", fontsize=12)
     self.axes[1].set_xlabel("Chemical shift (ppm)", fontsize=12)
 
-    self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d')
+    self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin)
     self.axes[2].set_title ("C", fontsize=16)
     self.axes[2].set_ylabel("Number of occurrences", fontsize=12)
     #self.axes[2].set_ylabel("Counts", fontsize=12)
