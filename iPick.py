@@ -39,10 +39,10 @@ import argparse
 import time
 import tempfile
 
-#if sys.version_info[0] == 2:
-import ucsftool
-#else:
-#    import ucsftool3 as ucsftool
+if sys.version_info[0] == 2:
+  import ucsftool
+else:
+  import ucsftool3 as ucsftool
 
 ut = ucsftool.ucsfTool()
 
@@ -209,7 +209,15 @@ def main():
             res = [args.res] * ndim
         print_log('Resolution setting: ', res[0])
         peak_sign = int(args.sign)
-        grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
+        #grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
+        import runpy
+        m = runpy.run_module('ucsftool', {'ut': ut,
+                                    'func': 'find_peaks',
+                                    'noiselevel': noiselevel,
+                                    'res': res,
+                                    'sign': peak_sign,
+                                    'verbose': True}, '__main__', True)
+        grid_peaks = m['grid_peaks']
     else:
         print_log('Using NMRGLUE to detect local maxima.')
 

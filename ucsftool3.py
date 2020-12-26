@@ -1116,7 +1116,7 @@ class ucsfTool:
             # check if it is local maxima in 1D->2D->3D->4D
             for j in range(len(grid_buffers)):
                 tf, hts = self.is_local_maxima(grid_pt,
-                                               grid_buffers[0:1+j] + zl[j],
+                                               grid_buffers[0:1+j] + zl[4-ndim+j],
                                                sign, ref_ht=temp_hts)
                 if not tf:
                     break

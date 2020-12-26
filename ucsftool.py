@@ -1889,7 +1889,17 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None, \
   ut.ucsf_close()
   print_log(datetime.datetime.now())
 
+grid_peaks = []
 if __name__=="__main__":
-  print_log('List of available functions:')
-  ut=ucsfTool()
-  ut.help()
+  if func != 'find_peaks':
+    print_log('List of available functions:')
+    ut=ucsfTool()
+    ut.help()
+  else:
+    multiprocessing.freeze_support()
+    grid_peaks, _ = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign, 
+                              verbose=verbose)
+
+#      def find_peaks(self, noise_level, grid_buffers, sign=1,
+#                  shift_restraint=None, shift_grid_buffers=None,
+#                  max_count=None, verbose=True):
