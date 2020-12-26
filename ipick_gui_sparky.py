@@ -40,7 +40,6 @@ else:
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
-PEAKLIST_FILE = os.path.join(tempfile.gettempdir(), 'peaks.list')
 DONE_FILE = os.path.join(IPICK_PATH, 'done')
 
 sys.path.append(IPICK_PATH)
@@ -743,7 +742,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
             " -i " + UCSF_FILE +
-            " -o " + PEAKLIST_FILE +
+            " -o " + self.PEAKLIST_FILE +
             " -r " + self.resolution +
             " -c " + CPUs +
             " --sign " + self.pos_neg.get() +
@@ -754,7 +753,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         # using noise level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
                 " -i " + UCSF_FILE +
-                " -o " + PEAKLIST_FILE +
+                " -o " + self.PEAKLIST_FILE +
                 " -r " + self.resolution +
                 " -c " + CPUs +
                 " --sign " + self.pos_neg.get() +
@@ -766,7 +765,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         # using contour level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
                " -i " + UCSF_FILE +
-               " -o " + PEAKLIST_FILE +
+               " -o " + self.PEAKLIST_FILE +
                " -r " + self.resolution +
                " -c " + CPUs +
                " --threshold " + self.a_contour.variable.get() +
@@ -821,8 +820,25 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     try:
 
-        if os.path.exists(PEAKLIST_FILE):
-            os.remove(PEAKLIST_FILE)
+        experiment_file = os.path.split(UCSF_FILE)[1]
+        experiment_name = os.path.splitext(experiment_file)[0]
+        peak_list = experiment_name + '.list'
+
+        self.PEAKLIST_FILE = os.path.join(tempfile.gettempdir(), peak_list)
+
+        # try putting the peak list file in the Lists folder
+        try:
+            Spectra_folder = os.path.split(UCSF_FILE)[0]
+            project_folder = os.path.split(Spectra_folder)[0]
+            Lists_folder = os.path.join(project_folder, 'Lists')
+            if os.path.exists(Lists_folder) and os.access(Lists_folder, os.W_OK | os.X_OK):
+                self.PEAKLIST_FILE = os.path.join(Lists_folder, peak_list)
+        except:
+            pass
+
+
+        if os.path.exists(self.PEAKLIST_FILE):
+            os.remove(self.PEAKLIST_FILE)
 
         #self.ipick_process(UCSF_FILE)
         self.stoppable_call(self.ipick_process, UCSF_FILE)
@@ -895,7 +911,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             widget.config(text="Status: peak picking is done.")
             widget.update()
 
-            print('Found peaks are also stored in "' + PEAKLIST_FILE + '" file.')
+            print('Found peaks are also stored in "' + self.PEAKLIST_FILE + '" file.')
 
             tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
 
@@ -935,7 +951,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.update()
 
 
-    peaks = open(PEAKLIST_FILE, 'r').readlines()
+    peaks = open(self.PEAKLIST_FILE, 'r').readlines()
     if len(peaks) < 4:
         tkMessageBox.showwarning(title='Error', message='Peak list file is empty!')
         return
