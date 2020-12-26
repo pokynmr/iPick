@@ -88,6 +88,10 @@ unpack_byte = struct.Struct('>B').unpack
 unpack_int = struct.Struct('>I').unpack
 pack_float = struct.Struct('>f').pack
 
+OS_WINDOWS = False
+if ((sys.platform == 'win32') or (sys.platform == 'cygwin')):
+    OS_WINDOWS = True
+
 def print_log(*args):
     msg = ''
     for s in args:
@@ -328,8 +332,11 @@ class ucsfTool:
             % (self.file_name))
       return 0
 
-    self.file_object = map(lambda x: open(self.file_name, 'rb', os.O_NONBLOCK), \
-                            range(nproc))
+    if OS_WINDOWS:
+        self.file_object = map(lambda x: open(self.file_name, 'rb'), range(nproc))
+    else:
+        self.file_object = map(lambda x: open(self.file_name, 'rb', os.O_NONBLOCK), range(nproc))
+
     self.file_object[0].seek(0, 2) # seek_end
     self.file_size = self.file_object[0].tell()
     if self.file_size < 180 + 128*2: # 180: file header, 128: axis header
@@ -976,22 +983,63 @@ class ucsfTool:
         permute_count *= len(range_list[j])
       if verbose:
         print_log('Process %d: %d permutes' % (i+1, permute_count))
-      t = multiprocessing.Process(target=self.process_find_peaks,
-                          args=[it, permute_count, noise_level, grid_buffers,
-                          sign, i, grid_restraint, q, verbose])
-      t.start()
-      process_list.append(t)
-    for t in process_list:
-    #while not q.empty():
-      pks, hts = q.get()
-      grid_peaks += pks
-      heights += hts
-    for t in process_list:
-      t.join()
+
+      # the multiprocessing is not working properly in Windows
+      if OS_WINDOWS:
+        grid_peaks, heights = self.process_find_peaks_windows(it, permute_count, 
+            noise_level, grid_buffers, sign, i, grid_restraint, q, verbose)
+
+      else:
+        t = multiprocessing.Process(target=self.process_find_peaks,
+                                    args=[it, permute_count, noise_level, grid_buffers,
+                                    sign, i, grid_restraint, q, verbose])
+
+        t.start()
+        process_list.append(t)
+    if not OS_WINDOWS:        
+      for t in process_list:
+        pks, hts = q.get()
+        grid_peaks += pks
+        heights += hts
+      for t in process_list:
+        t.join()
+#      t = multiprocessing.Process(target=self.process_find_peaks,
+#                          args=[it, permute_count, noise_level, grid_buffers,
+#                          sign, i, grid_restraint, q, verbose])
+#      t.start()
+#      process_list.append(t)
+#    for t in process_list:
+#      pks, hts = q.get()
+#      grid_peaks += pks
+#      heights += hts
+#    for t in process_list:
+#      t.join()
+      
     if verbose and self.nproc != 1:
       print_log(datetime.datetime.now())
       print_log('Find peaks: %d peaks' % (len(grid_peaks)))
     return grid_peaks, heights
+  
+  def process_find_peaks_windows(self, it, permute_count, noise_level, grid_buffers,
+                                 sign, pnum, grid_restraint, q, verbose):
+
+    chunk_size = 100000
+    chunk_count = int(permute_count / chunk_size) + 1
+    cur_percent = -1
+    peaks, heights = [], []
+    for i in range(chunk_count):
+      if verbose and self.nproc == 1:
+        tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
+        if tmp_percent > cur_percent:
+          cur_percent = tmp_percent
+          print_log(datetime.datetime.now())
+          print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
+      pts = tuple(itertools.islice(it, chunk_size))
+      pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
+                                pnum, grid_restraint)
+      peaks += pks
+      heights += hts
+    return peaks, heights
 
   def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
                         sign, pnum, grid_restraint, q, verbose):
