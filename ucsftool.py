@@ -851,8 +851,7 @@ class ucsfTool:
       temp_ht = self.get_data(pt)
       if (temp_ht < std_ht * 0.2 and sign == 1) or \
           (temp_ht > std_ht * 0.2 and sign == -1) or \
-          (abs(temp_ht) * 0.2 < astd_ht and sign == 0):
-        #print(temp_ht, std_ht, pt, grid_pt)
+          (abs(temp_ht) < astd_ht * 0.2 and sign == 0):
         return False, std_ht
       if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
           or (abs(temp_ht) > astd_ht and sign == 0):
