@@ -40,7 +40,7 @@ else:
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
-DONE_FILE = os.path.join(IPICK_PATH, 'done')
+DONE_FILE = os.path.join(tempfile.gettempdir(), 'done')
 
 sys.path.append(IPICK_PATH)
 try:

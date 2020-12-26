@@ -256,7 +256,7 @@ def main():
     # this is to be checked by other modules that this program is done
     time.sleep(0.5)
     IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
-    done_file = open(os.path.join(IPICK_PATH, 'done'), 'w')
+    done_file = open(os.path.join(tempfile.gettempdir(), 'done'), 'w')
     done_file.close()
 
 
