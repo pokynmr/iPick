@@ -12,6 +12,7 @@ import subprocess
 import time
 import sys
 import tempfile
+import multiprocessing
 
 if sys.version_info[0] == 2:
   import Tkinter as tk
@@ -27,13 +28,19 @@ import sputil
 import tkutil
 import pyutil
 
-# if the version for the python packaged with Sparky changed, correct the lines bellow:
-PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'bin', 'python2.7')      # Linux
-if not os.path.exists(PYTHON_BIN):
-    PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')    # Windows
+if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
+    PYTHON_BIN = 'python'
+    PYTHON_INSTALLED = True
+else:
+    # if the version for the python packaged with Sparky changed, correct the lines bellow:
+    PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'bin', 'python2.7')      # Linux
+    if not os.path.exists(PYTHON_BIN):
+        PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')    # Windows
+    PYTHON_INSTALLED = False
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
+PEAKLIST_FILE = os.path.join(tempfile.gettempdir(), 'peaks.list')
 DONE_FILE = os.path.join(IPICK_PATH, 'done')
 
 sys.path.append(IPICK_PATH)
@@ -729,9 +736,16 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def ipick_process(self, UCSF_FILE):
+
+    CPUs = str(multiprocessing.cpu_count())
+    if not PYTHON_INSTALLED:
+        CPUs = '1'
+
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
             " -i " + UCSF_FILE +
-            " -o peaks.list -r " + self.resolution +
+            " -o " + PEAKLIST_FILE +
+            " -r " + self.resolution +
+            " -c " + CPUs +
             " --sign " + self.pos_neg.get() +
             " --overwrite")
 
@@ -740,7 +754,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         # using noise level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
                 " -i " + UCSF_FILE +
-                " -o peaks.list -r " + self.resolution +
+                " -o " + PEAKLIST_FILE +
+                " -r " + self.resolution +
+                " -c " + CPUs +
                 " --sign " + self.pos_neg.get() +
                 " --threshold " + self.a_noise.variable.get() +
                 " --overwrite")
@@ -750,9 +766,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         # using contour level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
                " -i " + UCSF_FILE +
-               " -o peaks.list -r " + self.resolution +
+               " -o " + PEAKLIST_FILE +
+               " -r " + self.resolution +
+               " -c " + CPUs +
                " --threshold " + self.a_contour.variable.get() +
                " --overwrite")
+
+    print cmd
 
     if OS_WINDOWS:
         self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
@@ -801,8 +821,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     try:
 
-        if os.path.exists('peaks.list'):
-            os.remove('peaks.list')
+        if os.path.exists(PEAKLIST_FILE):
+            os.remove(PEAKLIST_FILE)
 
         #self.ipick_process(UCSF_FILE)
         self.stoppable_call(self.ipick_process, UCSF_FILE)
@@ -875,7 +895,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             widget.config(text="Status: peak picking is done.")
             widget.update()
 
-            print('Found peaks are also stored in "' + os.path.join(os.getcwd(), 'peaks.list') + '" file.')
+            print('Found peaks are also stored in "' + PEAKLIST_FILE + '" file.')
 
             tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
 
@@ -915,7 +935,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.update()
 
 
-    peaks = open('peaks.list', 'r').readlines()
+    peaks = open(PEAKLIST_FILE, 'r').readlines()
     if len(peaks) < 4:
         tkMessageBox.showwarning(title='Error', message='Peak list file is empty!')
         return
