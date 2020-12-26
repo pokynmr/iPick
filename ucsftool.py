@@ -4,20 +4,22 @@
 # -----------------------------------------------------------------------------
 #
 # Developed by Woonghee Lee
-# e-mail: whlee@nmrfam.wisc.edu
-# National Magnetic Resonance Facilities at Madison
-# Department of Bichemistry, University of Wisconsin at Madison
+# e-mail: woonghee.lee@ucdenver.edu
+# Department of Chemistry, University of Colorado Denver
 #
-# Last updated: December 10, 2019
+# Last updated: December 26, 2020
 #
 # This tool is to read, write and transform ucsf files
 #
 # Developed since July, 2018
 #
+# Python 3 Ported by Mehdi Rahimi
+#
 # -----------------------------------------------------------------------------
 #
 # e.g. Use help() function to see what this does
 #   import sys
+#   sys.path.append("/home/samic/Desktop/wlee_group/source/rahimi/ucsfTool")
 #   import ucsftool
 #   ut = ucsftool.ucsfTool()
 #   ut.help()
@@ -46,7 +48,7 @@
 #
 # BSD 2-Clause License
 #
-# Copyright (c) 2020, Woonghee Lee (whlee@nmrfam.wisc.edu)
+# Copyright (c) 2020, Woonghee Lee (woonghee.lee@ucdenver.edu)
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -85,10 +87,6 @@ unpack_float = struct.Struct('>f').unpack
 unpack_byte = struct.Struct('>B').unpack
 unpack_int = struct.Struct('>I').unpack
 pack_float = struct.Struct('>f').pack
-
-OS_WINDOWS = False
-if ((sys.platform == 'win32') or (sys.platform == 'cygwin')):
-    OS_WINDOWS = True
 
 def print_log(*args):
     msg = ''
@@ -138,7 +136,6 @@ def stddev(data, ddof=0):
     ss = _ss(data)
     pvar = ss/(n-ddof)
     return pvar**0.5
-
 
 class ucsfTool:
   # ---------------------------------------------------------------------------
@@ -296,7 +293,7 @@ class ucsfTool:
   #
   def dummy_tile(self):
     tile_data = {'TilePos': (),
-                   'Values':()}
+                 'Values': ()}
     return tile_data
 
   # ---------------------------------------------------------------------------
@@ -331,11 +328,8 @@ class ucsfTool:
             % (self.file_name))
       return 0
 
-    if OS_WINDOWS:
-        self.file_object = map(lambda x: open(self.file_name, 'rb'), range(nproc))
-    else:
-        self.file_object = map(lambda x: open(self.file_name, 'rb', os.O_NONBLOCK), range(nproc))
-
+    self.file_object = map(lambda x: open(self.file_name, 'rb', os.O_NONBLOCK), \
+                            range(nproc))
     self.file_object[0].seek(0, 2) # seek_end
     self.file_size = self.file_object[0].tell()
     if self.file_size < 180 + 128*2: # 180: file header, 128: axis header
@@ -824,7 +818,11 @@ class ucsfTool:
   # Check if this grid is the maximum
   #
   def is_local_maxima(self, grid_pt, grid_buffers, sign = 1, ref_ht = None):
-    pt_list = []
+    if ref_ht == None:  std_ht = self.get_data(grid_pt)
+    else: std_ht = ref_ht
+    if std_ht * sign < 0:
+      return False, std_ht 
+
     if len(grid_pt) == 2:
       it = itertools.product(range(grid_pt[0]-grid_buffers[0],
                                    grid_pt[0]+grid_buffers[0]+1),
@@ -847,13 +845,17 @@ class ucsfTool:
                              range(grid_pt[3]-grid_buffers[3],
                                    grid_pt[3]+grid_buffers[3]+1))
     pt_list = tuple(it)
-    if ref_ht == None:  std_ht = self.get_data(grid_pt)
-    else: std_ht = ref_ht
+    astd_ht = abs(std_ht)
     for pt in pt_list:
       if grid_pt == pt: continue
       temp_ht = self.get_data(pt)
+      if (temp_ht < std_ht * 0.2 and sign == 1) or \
+          (temp_ht > std_ht * 0.2 and sign == -1) or \
+          (abs(temp_ht) * 0.2 < astd_ht and sign == 0):
+        #print(temp_ht, std_ht, pt, grid_pt)
+        return False, std_ht
       if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
-        or (abs(temp_ht) > abs(std_ht) and sign == 0):
+          or (abs(temp_ht) > astd_ht and sign == 0):
         return False, std_ht
     return True, std_ht
 
@@ -975,54 +977,22 @@ class ucsfTool:
         permute_count *= len(range_list[j])
       if verbose:
         print_log('Process %d: %d permutes' % (i+1, permute_count))
-
-    # the multiprocessing is not working properly in Windows
-    if OS_WINDOWS:
-        grid_peaks, heights = self.process_find_peaks_windows(it, permute_count, noise_level, grid_buffers,
-                          sign, i, grid_restraint, q, verbose)
-
-    else:
-        t = multiprocessing.Process(target=self.process_find_peaks,
-                                    args=[it, permute_count, noise_level, grid_buffers,
-                                    sign, i, grid_restraint, q, verbose])
-
-        t.start()
-        process_list.append(t)
-        for t in process_list:
-        #while not q.empty():
-          pks, hts = q.get()
-          grid_peaks += pks
-          heights += hts
-        for t in process_list:
-          t.join()
-
+      t = multiprocessing.Process(target=self.process_find_peaks,
+                          args=[it, permute_count, noise_level, grid_buffers,
+                          sign, i, grid_restraint, q, verbose])
+      t.start()
+      process_list.append(t)
+    for t in process_list:
+    #while not q.empty():
+      pks, hts = q.get()
+      grid_peaks += pks
+      heights += hts
+    for t in process_list:
+      t.join()
     if verbose and self.nproc != 1:
       print_log(datetime.datetime.now())
       print_log('Find peaks: %d peaks' % (len(grid_peaks)))
     return grid_peaks, heights
-
-
-  def process_find_peaks_windows(self, it, permute_count, noise_level, grid_buffers,
-                                 sign, pnum, grid_restraint, q, verbose):
-
-    chunk_size = 100000
-    chunk_count = int(permute_count / chunk_size) + 1
-    cur_percent = -1
-    peaks, heights = [], []
-    for i in range(chunk_count):
-      if verbose and self.nproc == 1:
-        tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
-        if tmp_percent > cur_percent:
-          cur_percent = tmp_percent
-          print_log(datetime.datetime.now())
-          print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
-      pts = tuple(itertools.islice(it, chunk_size))
-      pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
-                                pnum, grid_restraint)
-      peaks += pks
-      heights += hts
-    return peaks, heights
-
 
   def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
                         sign, pnum, grid_restraint, q, verbose):
@@ -1102,14 +1072,25 @@ class ucsfTool:
     grid_peaks, heights = [], []
     npt = len(pts)
     prev_grid_pt = list(map(lambda x: -2, range(len(pts))))
+    sgb = sum(grid_buffers)
     hts = noise_level
+    ahts = abs(hts)
     tf = False
-    zl = [[0, 0, 0], [0,0], [0]]
+    ndim = len(grid_buffers)
+    zl = [[0, 0, 0], [0,0], [0], [],]
     for i in range(npt):
       grid_pt = pts[i]
+      
+      # if neighbor is maximum. No need to evaluate
+      if tf:
+        diff = 0
+        for j in range(ndim):
+          diff += abs(prev_grid_pt[j]-grid_pt[j])
+        if diff < sgb: continue 
+      
       temp_hts = self.get_data(grid_pt)
       atemp_hts = abs(temp_hts)
-      if atemp_hts < abs(noise_level): continue
+      if atemp_hts < ahts: continue
       if len(grid_peaks) > self.max_count and atemp_hts < self.min_heights[pnum]:
         continue
 
@@ -1118,15 +1099,10 @@ class ucsfTool:
          (temp_hts * sign < 0):
         continue
 
-      if tf:
-        diff = 0
-        for j in range(len(grid_buffers)):
-          diff += abs(prev_grid_pt[j]-grid_pt[j])
-        if diff < 3: continue # neighbor is maximum. No need to evaluate
       # check if it is local maxima in 1D->2D->3D->4D
-      for j in range(len(grid_buffers)):
+      for j in range(ndim):
         tf, hts = self.is_local_maxima(grid_pt,
-                    grid_buffers[0:1+j] + zl[j],
+                    grid_buffers[0:1+j] + zl[4-ndim+j],
                     sign, ref_ht = temp_hts)
         if not tf:
           break
@@ -1135,7 +1111,7 @@ class ucsfTool:
         grid_peaks.append(grid_pt)
         heights.append(hts)
         prev_grid_pt = grid_pt
-        self.min_heights[pnum] = min(self.min_heights[pnum], abs(hts))
+        self.min_heights[pnum] = min(self.min_heights[pnum], ahts)
     return grid_peaks, heights
 
     # EXAMPLE
