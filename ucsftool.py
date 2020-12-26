@@ -986,9 +986,10 @@ class ucsfTool:
 
       # the multiprocessing is not working properly in Windows
       if OS_WINDOWS:
-        grid_peaks, heights = self.process_find_peaks_windows(it, permute_count, 
+        pks, hts = self.process_find_peaks_windows(it, permute_count, 
             noise_level, grid_buffers, sign, i, grid_restraint, q, verbose)
-
+        grid_peaks += pks
+        heights += hts
       else:
         t = multiprocessing.Process(target=self.process_find_peaks,
                                     args=[it, permute_count, noise_level, grid_buffers,
@@ -1003,17 +1004,17 @@ class ucsfTool:
         heights += hts
       for t in process_list:
         t.join()
-#      t = multiprocessing.Process(target=self.process_find_peaks,
-#                          args=[it, permute_count, noise_level, grid_buffers,
-#                          sign, i, grid_restraint, q, verbose])
-#      t.start()
-#      process_list.append(t)
-#    for t in process_list:
-#      pks, hts = q.get()
-#      grid_peaks += pks
-#      heights += hts
-#    for t in process_list:
-#      t.join()
+      t = multiprocessing.Process(target=self.process_find_peaks,
+                          args=[it, permute_count, noise_level, grid_buffers,
+                          sign, i, grid_restraint, q, verbose])
+      t.start()
+      process_list.append(t)
+    for t in process_list:
+      pks, hts = q.get()
+      grid_peaks += pks
+      heights += hts
+    for t in process_list:
+      t.join()
       
     if verbose and self.nproc != 1:
       print_log(datetime.datetime.now())
