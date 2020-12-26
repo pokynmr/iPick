@@ -3,12 +3,12 @@
 """
 Integrated UCSF Peak Picker v0.1.
 
-by Woonghee Lee (whlee@nmrfam.wisc.edu)
+by Woonghee Lee (woonghee.lee@ucdenver.edu)
 
 
 BSD 2-Clause License
 
-Copyright (c) 2020, LeeGroup
+Copyright (c) 2020, Lee Group
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -39,15 +39,15 @@ import argparse
 import time
 import tempfile
 
-if sys.version_info[0] == 2:
-    import ucsftool
-else:
-    import ucsftool3 as ucsftool
+#if sys.version_info[0] == 2:
+import ucsftool
+#else:
+#    import ucsftool3 as ucsftool
 
 ut = ucsftool.ucsfTool()
 
 DESC = '\nIntegrated UCSF Peak Picker v0.1\n\t\
-    by Woonghee Lee (whlee@nmrfam.wisc.edu)\n'
+    by Woonghee Lee (woonghee.lee@ucdenver.edu)\n'
 
 NMRGLUE_PATH = 'nmrglue-0.7'
 UCSFTOOL_PATH = '.'
