@@ -43,6 +43,9 @@ except ImportError:
     print('Could not find iPick to import')
     tkMessageBox.showwarning(title='Error', message='Could not find iPick!')
 
+OS_WINDOWS = False
+if ((sys.platform == 'win32') or (sys.platform == 'cygwin')):
+    OS_WINDOWS = True
 
 manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs = [[]] * 6
 
@@ -483,7 +486,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 # ---------------------------------------------------------------------------
   def stop_button(self, *args):
     try:
-        os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
+
+        if not OS_WINDOWS:
+            os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
 
     #    import psutil
     #    process = psutil.Process(self.proc.pid)
@@ -511,12 +516,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
         self.stopped_flag = 1
 
+
+        self.stop_cb()
+        self.a_stop_button['state'] = 'disabled'
+        self.b_stop_button['state'] = 'disabled'
+
     except:
         pass
-
-    self.stop_cb()
-    self.a_stop_button['state'] = 'disabled'
-    self.b_stop_button['state'] = 'disabled'
 
 
 # ---------------------------------------------------------------------------
@@ -662,7 +668,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
         return
 
-    widget.config(text="Status: Noise level found. Now run iPick!")
+    widget.config(text="Status: Noise level found.")
     widget.update()
 
     UCSF_FILE = self.spec_list[idx].data_path
@@ -748,8 +754,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                " --threshold " + self.a_contour.variable.get() +
                " --overwrite")
 
-
-    self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True, preexec_fn=os.setsid)
+    if OS_WINDOWS:
+        self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+    else:
+        self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True, preexec_fn=os.setsid)
 
 
 # ---------------------------------------------------------------------------
@@ -1040,6 +1048,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
 
     #self.session.command_characters('lt')
+    time.sleep(0.3)     # a delay is needed for the peak list to update
     self.show_pick_list()    # show _our_ peak list instead of the default one
 
 
@@ -1109,23 +1118,20 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 			   ('Update', self.update_cb),
 			   ('Setup...', self.setup_cb),
 			   ('Sort by height', self.sort_cb),
-			   ('Save...', self.peak_list.save_cb),
-			   ('Stop', self.stop_cb),
-			   ('Close', self.close_cb),
-               ('Help', sputil.help_cb(session, 'PeakListPython')),
+			   ('Sort by Reliability Score', self.sort_rs),
 			   )
     br.frame.pack(side = 'top', anchor = 'w')
 
     rs_frame = tk.Frame(self.top)
     rs_frame.pack(anchor = 'w')
 
-    br2 = tkutil.button_row(rs_frame,
-			   ('Sort by Reliability Score', self.sort_rs),
-			   #('Remove peaks with Reliability Score of 0', self.remove_rs0),
-			   )
-    br2.frame.pack(side = 'left', anchor = 'w')
+#    br2 = tkutil.button_row(rs_frame,
+#			   ('Sort by height', self.sort_cb),
+#			   #('Remove peaks with Reliability Score of 0', self.remove_rs0),
+#			   )
+#    br2.frame.pack(side = 'left', anchor = 'w')
 
-    self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Threshold for removing peaks:',
+    self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Reliability Score threshold for removing peaks:',
                                                 width=12, initial='100.0')
     self.remove_rs0_thresh.frame.pack(side='left', padx=(5,5))
     tkutil.create_hint(self.remove_rs0_thresh.frame,
@@ -1136,10 +1142,37 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(remove_rs0_button,
                        'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
 
+    cv_frame = tk.Frame(self.top)
+    cv_frame.pack(anchor = 'w')
+
+    cv = tkutil.button_row(cv_frame,
+			   ('Cross-Validation Module', self.run_xcheck),
+			   ('Save...', self.peak_list.save_cb),
+			   ('Stop', self.stop_cb),
+			   ('Close', self.close_cb),
+               ('Help', sputil.help_cb(session, 'PeakListPython')),
+			   )
+    cv.frame.pack(side = 'left', anchor = 'w')
+
+    tkutil.create_hint(cv.buttons[0], 'Use the Cross-Validation tool for removing noise peaks')
+    tkutil.create_hint(cv.buttons[1], 'Save the Peak List data as being shown')
+
     keypress_cb = pyutil.precompose(sputil.command_keypress_cb, session)
     self.pl.listbox.bind('<KeyPress>', keypress_cb)
 
-    tkutil.Stoppable.__init__(self, progress_label, br.buttons[4])
+    tkutil.Stoppable.__init__(self, progress_label, cv.buttons[2])
+
+  # ---------------------------------------------------------------------------
+  #
+  def run_xcheck(self, *args):
+
+    try:
+        import xcheck
+        xcheck.show_xcheck_dialog(self.session)
+
+    except:
+        print('Could not find Cross Validation module to import')
+        tkMessageBox.showwarning(title='Error', message='Could not find Cross Validation module!')
 
   # ---------------------------------------------------------------------------
   #
@@ -1622,7 +1655,7 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
     tkutil.create_hint(coeff1.frame, 'Specify the coefficient for the Volume in the Reliability Score formula')
 
     coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='10')
-    tkutil.create_hint(coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio in the Reliability Score formula')
+    tkutil.create_hint(coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio (SNR) in the Reliability Score formula')
 
 
     coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='0.1')
@@ -1675,7 +1708,8 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
         try:
             self.field_widgets[f.__class__].set_widget_state(f)
         except:
-            print f.__class__
+            pass
+            #print f.__class__
 
   # ---------------------------------------------------------------------------
   #

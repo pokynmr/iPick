@@ -439,7 +439,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 #                    else:
 #                        this_hist[this_bin] = 1
 
-            round_digit = int(-1 * math.floor(math.log10(bin_step)))
+            round_digit = int(-1 * math.floor(math.log10(abs(bin_step))))
             # finds the number of digits to round of
             # gives 1 for 0.1 or 0.5
             # gives -1 for 10 or 13
