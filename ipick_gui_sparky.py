@@ -76,6 +76,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.import_dist = 0.0
     self.import_drop = 0.0
     self.auto_integration = True
+    self.spectrum = None
 
 
     tkutil.Dialog.__init__(self, session.tk, 'iPick (Integrated UCSF Peak Picker)')
@@ -630,6 +631,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
             return
         idx = self.a_tree.selected_line_numbers()[0]
+
     widget.config(text="Status: Spectrum selected. Check the contour level!")
     widget.update()
 
@@ -639,10 +641,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # print(self.spec_list[idx].data_path)
 
-    spec = self.spec_list[idx]
+    self.spectrum = self.spec_list[idx]
     views = self.session.project.view_list()
     for v in views:
-        if v.name == spec.name:
+        if v.name == self.spectrum.name:
             v.got_focus()
             self.pos_contour = v.positive_levels.lowest
             self.neg_contour = v.negative_levels.lowest
@@ -656,27 +658,17 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def noise_level(self):
     if (self.basic_adv == 'basic'):
         widget = self.b_status
-        data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.b_tree.selected_line_numbers()[0]
     else:
         widget = self.a_status
-        data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.a_tree.selected_line_numbers()[0]
 
-    if idx == None:
-        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
+    if self.spectrum == None:
+        tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
 
     widget.config(text="Status: Noise level found.")
     widget.update()
 
-    UCSF_FILE = self.spec_list[idx].data_path
+    UCSF_FILE = self.spectrum.data_path
 
     #reload(iPick)
     self.noise = iPick.get_noise_level(UCSF_FILE)
@@ -783,24 +775,14 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def run_ipick(self):
 
     if (self.basic_adv == 'basic'):
-        data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.b_tree.selected_line_numbers()[0]
         widget = self.b_status
     else:
-        data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.a_tree.selected_line_numbers()[0]
         widget = self.a_status
     widget.config(text="Status: iPick is running ...")
     widget.update()
 
-    if idx == None:
-        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
+    if self.spectrum == None:
+        tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
 
     self.set_resolution()
@@ -815,7 +797,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         if self.a_contour.variable.get() == '':
             self.contour_level()
 
-    UCSF_FILE = self.spec_list[idx].data_path
+    UCSF_FILE = self.spectrum.data_path
 
 
     try:
@@ -965,33 +947,18 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             self.show_peak_list()
             return
 
-
-    if (self.basic_adv == 'basic'):
-        data_list = self.b_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.b_tree.selected_line_numbers()[0]
-    else:
-        data_list = self.a_tree.selected_line_data()
-        if len(data_list) < 1:
-            tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
-            return
-        idx = self.a_tree.selected_line_numbers()[0]
-
-    if idx == None:
-        tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
+    if self.spectrum == None:
+        tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
 
-    spec = self.spec_list[idx]
     #spec = s.selected_spectrum()
-    view = self.get_view(spec)
+    view = self.get_view(self.spectrum)
 
     self.set_import_dist()
     self.set_import_drop()
     self.integration_check()
 
-    spec_peaks = spec.peak_list()
+    spec_peaks = self.spectrum.peak_list()
     #print spec_peaks[1].frequency[0]
 
     print('\n\nCurrent peaks in the spectra: ' + str(len(spec_peaks)))
@@ -1013,12 +980,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.top.update()
         new_peak_list = peaks[i].split()[1:-1]   # also removes the first and last columns from the peak list file
         new_peak_tuple = tuple(float(e) for e in new_peak_list)
-        new_peak = tuple(map(lambda i, j: i + j, new_peak_tuple, spec.scale_offset))
+        new_peak = tuple(map(lambda i, j: i + j, new_peak_tuple, self.spectrum.scale_offset))
 
         new_peak_flag = True
 
         if spec_peaks == []:
-            pk = spec.place_peak(new_peak)
+            pk = self.spectrum.place_peak(new_peak)
             placed_peaks += 1
             if self.auto_integration:
                 pk.fit(view)
@@ -1043,11 +1010,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                     print('The new peak is too close to this already existing peak:')
                     print(exis_peak.frequency)
 
-                    #print spec.data_height((117.6,5.2,8.13))
-                    midpoint_height = spec.data_height(self.mid_point(exis_peak.frequency, new_peak))
+                    #print self.spectrum.data_height((117.6,5.2,8.13))
+                    midpoint_height = self.spectrum.data_height(self.mid_point(exis_peak.frequency, new_peak))
 
-                    new_peak_height = spec.data_height(new_peak)
-                    exis_peak_height = spec.data_height(exis_peak.frequency)
+                    new_peak_height = self.spectrum.data_height(new_peak)
+                    exis_peak_height = self.spectrum.data_height(exis_peak.frequency)
 
                     #print new_peak_height
                     #print exis_peak_height
@@ -1062,7 +1029,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
         if new_peak_flag:
             print('This is a new peak. Importing this peak.')
-            pk = spec.place_peak(new_peak)
+            pk = self.spectrum.place_peak(new_peak)
             placed_peaks += 1
 
             if self.auto_integration:
@@ -1073,10 +1040,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 #                    self.session.command_characters("pi")
 
     if self.integration_radio.get() == '2':
-        for p in spec.peak_list():
+        for p in self.spectrum.peak_list():
             p.selected = 1
         self.session.command_characters("pi")
-        for p in spec.peak_list():
+        for p in self.spectrum.peak_list():
             p.selected = 0
 
     status.config(text="Status: Importing the peaks is completed.")
