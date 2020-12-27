@@ -491,9 +491,9 @@ class ucsfTool:
                 print_log('fd_divider set to: %f' % (self.fd_divider))
             fd = []
             for i in range(self.nproc):
-                fd.append([i, list(range(int(self.fd_divider * i), 
+                fd.append([i, list(range(int(self.fd_divider * i),
                     int(self.fd_divider * (i+1))))])
-            self.fd_dict = dict(fd)                
+            self.fd_dict = dict(fd)
         except Exception:
             msg = 'Error in ucsfTool:read_axis_header()- processing dimension '
             msg = msg + '%d failed' % (i+1)
@@ -751,7 +751,7 @@ class ucsfTool:
         for i in range(self.nproc):
             if grid_idx in self.fd_dict[i]:
                 return i
-        return None:
+        return None
     # ---------------------------------------------------------------------------
     # Get Data Value by Grid Points
     #
@@ -880,7 +880,7 @@ class ucsfTool:
             return False, std_ht
         astd_ht = abs(std_ht)
         ndim = len(grid_pt)
-        
+
         if not simple:
             if ndim == 2:
                 it = itertools.product(range(grid_pt[0]-grid_buffers[0],
@@ -908,23 +908,23 @@ class ucsfTool:
             pt = list(grid_pt)
             for i in range(ndim):
                 for j in range(1, grid_buffers[i] + 1):
-                pt[i] = grid_pt[i] - j
-                temp_ht = self.get_data(pt)
-                if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
-                    or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
-                    return False, std_ht        
-                pt[i] = grid_pt[i] + j
-                temp_ht = self.get_data(pt)
-                if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
-                    or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
-                    return False, std_ht        
+                    pt[i] = grid_pt[i] - j
+                    temp_ht = self.get_data(pt)
+                    if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
+                        or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
+                        return False, std_ht
+                    pt[i] = grid_pt[i] + j
+                    temp_ht = self.get_data(pt)
+                    if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
+                        or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
+                        return False, std_ht
                 pt[i] = grid_pt[i]
             return True, std_ht
-            
+
         for pt in pt_list:
             if grid_pt == pt:
                 continue
-            temp_ht = self.get_data(pt)       
+            temp_ht = self.get_data(pt)
             if (temp_ht > std_ht and sign == 1) or \
                     (temp_ht < std_ht and sign == -1) or \
                     (abs(temp_ht) > abs(std_ht) and sign == 0):
@@ -1064,7 +1064,7 @@ class ucsfTool:
             if verbose:
                 print_log('Process %d: %d permutes' % (i+1, permute_count))
             if OS_WINDOWS:
-                pks, hts = self.process_find_peaks_windows(it, permute_count, 
+                pks, hts = self.process_find_peaks_windows(it, permute_count,
                     noise_level, grid_buffers, sign, i, grid_restraint, q, verbose)
                 grid_peaks += pks
                 heights += hts
@@ -1096,18 +1096,18 @@ class ucsfTool:
         peaks, heights = [], []
         #allsize = len(it)
         for i in range(chunk_count):
-        if verbose and self.nproc == 1:
-            tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
-            if tmp_percent > cur_percent:
-            cur_percent = tmp_percent
-            print_log(datetime.datetime.now())
-            print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
-        pts = list(itertools.islice(it, chunk_size))
-        #pts = it[i*chunk_size:min((i+1)*chunk_size, allsize)]
-        pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
-                                    pnum, grid_restraint)
-        peaks += pks
-        heights += hts
+            if verbose and self.nproc == 1:
+                tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
+                if tmp_percent > cur_percent:
+                    cur_percent = tmp_percent
+                    print_log(datetime.datetime.now())
+                    print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
+            pts = list(itertools.islice(it, chunk_size))
+            #pts = it[i*chunk_size:min((i+1)*chunk_size, allsize)]
+            pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
+                                        pnum, grid_restraint)
+            peaks += pks
+            heights += hts
         return peaks, heights
     def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
                            sign, pnum, grid_restraint, q, verbose):
@@ -1199,7 +1199,8 @@ class ucsfTool:
         zl = [[0, 0, 0], [0,0], [0], [],]
         for i in range(npt):
             grid_pt = pts[i]
-            
+
+            diff = sgb * 2
             if tf:
                 diff = 0
                 for j in range(len(grid_buffers)):
@@ -1219,7 +1220,7 @@ class ucsfTool:
                (temp_hts * sign < 0):
                 continue
 
-            
+
             # check if it is local maxima in 1D->2D->3D->4D
             #for j in range(ndim):
             j = ndim-1
@@ -1992,5 +1993,5 @@ if __name__ == "__main__":
     ut.help()
   else:
     multiprocessing.freeze_support()
-    grid_peaks, _ = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign, 
+    grid_peaks, grid_hts = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign,
                               verbose=verbose)
