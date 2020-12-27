@@ -18,8 +18,7 @@ else:
   import tkinter.font as TkFont
 
 import sparky
-import sputil
-import tkutil
+from sparky import sputil, tkutil
 from itertools import combinations
 import collections
 import math

@@ -24,9 +24,7 @@ else:
   import tkinter.font as TkFont
 
 import sparky
-import sputil
-import tkutil
-import pyutil
+from sparky import sputil, tkutil, pyutil
 
 if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
     PYTHON_BIN = 'python'
