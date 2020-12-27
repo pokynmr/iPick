@@ -406,7 +406,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_integration_radio_frm = tk.Frame(a_postpro_frm)
     #a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
 
-    integration_radio_label = tk.Label(self.a_integration_radio_frm, text="Auto Integration mode:")
+    integration_radio_label = tk.Label(self.a_integration_radio_frm, text="Integration mode:")
     integration_radio_label.pack(side='left', fill='both')
     self.integration_radio = tk.StringVar()
     self.integration_radio.set('1')
@@ -420,7 +420,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     integration_radio_button2.pack(side='left')
     tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
 
-    self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
+    integration_option_button = tk.Button(self.a_integration_radio_frm, text='Options', command=self.open_integration_options)
+    integration_option_button.pack(side='left', padx=(5,0))
+
+    self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(5,0), padx=5)
 
     # separator
     #sep = tk.Frame(a_btmfrm, height=2, bd=1, relief="ridge")
@@ -532,6 +535,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 # ---------------------------------------------------------------------------
+  def open_integration_options(self):
+    self.session.command_characters('it')
+
+
+# ---------------------------------------------------------------------------
   def groupfit_selected(self, *args):
     d = groupfit_dialog(self.session)
     d.show_window(1)
@@ -579,7 +587,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def integration_check(self, *args):
       self.auto_integration = self.a_check_integration.get()
       if self.a_check_integration.get():
-            self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
+            self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(5,0), padx=5)
       else:
             self.a_integration_radio_frm.pack_forget()
 
@@ -1071,7 +1079,7 @@ class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
     main_frame.pack(side='top', fill='both', expand=1, padx=10, pady=10)
 
     instruction_label = tk.Label(main_frame, justify='left',
-                                 text="Please open the Integration tool (two-letter-code it) for \neach experiment (select the spectra window and type \"it\") \nand then change the settings as follows. \nYou need to repeat this for each experiment.\n\n1. Change the Integration method to \"Pseudo-Voigt fit\"\n2. Un-check all the checkboxes.\n3. Check the \"Group peaks in contour boundary\".")
+                                 text="Please open the Integration tool (two-letter-code `it`) for \neach experiment (you can use the Options button) \nand then change the settings as follows. \nYou need to repeat this for each experiment.\n\n1. Change the Integration method to \"Pseudo-Voigt fit\"\n2. Un-check all the checkboxes.\n3. Check the \"Group peaks in contour boundary\".")
     instruction_label.pack(side='top', anchor='w', pady=(0,10))
 
     #from PIL import ImageTk, Image
