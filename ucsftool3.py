@@ -223,7 +223,7 @@ class ucsfTool:
         points_to_peaks(points):
         get_data(grid_pt)
         get_data_by_shifts(shift_pt)
-        get_interpolated_data(grid_pt)
+        get_interpolated_data(grid_pt, noise_level=None)
         get_interpolated_data_by_shifts(grid_pt)
         get_interpolated_data_by_peaks(peaks)
         sample_noise(sample_count=30)
@@ -471,6 +471,11 @@ class ucsfTool:
                       (self.axis_header_list[0]['DataPointCount']))
                 # print_log('fd_divider set to: %d' % (self.fd_divider))
                 print_log('fd_divider set to: %f' % (self.fd_divider))
+            fd = []
+            for i in range(self.nproc):
+                fd.append([i, list(range(int(self.fd_divider * i), 
+                    int(self.fd_divider * (i+1))))])
+            self.fd_dict = dict(fd)                
         except Exception:
             msg = 'Error in ucsfTool:read_axis_header()- processing dimension '
             msg = msg + '%d failed' % (i+1)
@@ -722,14 +727,25 @@ class ucsfTool:
             peak_list += (self.grids_to_shifts(points[i]),)
         return peak_list
     # ---------------------------------------------------------------------------
+    # Get File Descripter by Grid Points
+    #
+    def get_fdidx(self, grid_idx):
+        for i in range(self.nproc):
+            if grid_idx in self.fd_dict[i]:
+                return i
+        return None:
+    # ---------------------------------------------------------------------------
     # Get Data Value by Grid Points
-
+    #
     def get_data(self, grid_pt):
         if self.is_opened == 0:
             print_log('Error in ucsfTool:get_data()- file is not opened')
             return None
         tile_indices, remain_pt = self.grid_to_tile_and_remain_indices(grid_pt)
-        fdidx = min(int(float(grid_pt[0]) / self.fd_divider), self.nproc-1)
+        fdidx = self.get_fdidx(grid_pt[0])
+        if fdidx == None:
+            return 0.
+        #fdidx = min(int(float(grid_pt[0]) / self.fd_divider), self.nproc-1)
         remain_index = self.remain_indices_to_remain_index(remain_pt)
         # if self.cache_data == None:
         tile_data = self.read_tile_data(tile_indices, fd=fdidx)
@@ -771,19 +787,22 @@ class ucsfTool:
     # ---------------------------------------------------------------------------
     # Get Interpolated Shift Position and Data Value by Grid Points
 
-    def get_interpolated_data(self, grid_pt):
+    def get_interpolated_data(self, grid_pt, noise_level=None):
         if self.is_opened == 0:
             print_log('Error in ucsfTool:get_interpolated_data()- file is not opened')
-            return None
+            return None, None
 
         shifts = [0.0] * len(grid_pt)
+        d2 = self.get_data(grid_pt)
+        if noise_level:
+            if abs(d2) < abs(noise_level):
+                return None, None
         for i in range(len(grid_pt)):
             prev_grid_pt = list(grid_pt)
             next_grid_pt = list(grid_pt)
             prev_grid_pt[i] = grid_pt[i]-1
             next_grid_pt[i] = grid_pt[i]+1
             d1 = self.get_data(prev_grid_pt)
-            d2 = self.get_data(grid_pt)
             d3 = self.get_data(next_grid_pt)
             pos, value = interpolation(d1, d2, d3)
             if pos < 0 or pos > 2:  # extrapolated- use just middle
@@ -874,11 +893,12 @@ class ucsfTool:
                 pt[i] = grid_pt[i] - j
                 temp_ht = self.get_data(pt)
                 if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
-                    or (abs(temp_ht) > astd_ht and sign == 0):
+                    or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
                     return False, std_ht        
                 pt[i] = grid_pt[i] + j
+                temp_ht = self.get_data(pt)
                 if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
-                    or (abs(temp_ht) > astd_ht and sign == 0):
+                    or (abs(temp_ht) > astd_ht and sign == 0) or temp_ht == 0.0:
                     return False, std_ht        
                 pt[i] = grid_pt[i]
             return True, std_ht
@@ -989,7 +1009,8 @@ class ucsfTool:
         # divide for parallelization: dim 1
         x_range = list(map(lambda x: [], range(self.nproc)))
         for i in range(len(range_list[0])):
-            xidx = min(int(float(range_list[0][i]) / self.fd_divider), self.nproc-1)
+            xidx = self.get_fdidx(range_list[0][i])
+            #xidx = min(int(float(range_list[0][i]) / self.fd_divider), self.nproc-1)
             x_range[xidx].append(range_list[0][i])
 
         it_list = []
@@ -1006,6 +1027,7 @@ class ucsfTool:
                                        range_list[1],
                                        range_list[2],
                                        range_list[3])
+            #it_list.append(tuple(it))
             it_list.append(it)
 
         grid_peaks, heights = [], []
@@ -1047,6 +1069,28 @@ class ucsfTool:
             print_log('Find peaks: %d peaks' % (len(grid_peaks)))
         return grid_peaks, heights
 
+    def process_find_peaks_windows(self, it, permute_count, noise_level, grid_buffers,
+                                    sign, pnum, grid_restraint, q, verbose):
+
+        chunk_size = 100000
+        chunk_count = int(permute_count / chunk_size) + 1
+        cur_percent = -1
+        peaks, heights = [], []
+        #allsize = len(it)
+        for i in range(chunk_count):
+        if verbose and self.nproc == 1:
+            tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
+            if tmp_percent > cur_percent:
+            cur_percent = tmp_percent
+            print_log(datetime.datetime.now())
+            print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
+        pts = list(itertools.islice(it, chunk_size))
+        #pts = it[i*chunk_size:min((i+1)*chunk_size, allsize)]
+        pks, hts = self.find_peaks_per_node(pts, noise_level, grid_buffers, sign,
+                                    pnum, grid_restraint)
+        peaks += pks
+        heights += hts
+        return peaks, heights
     def process_find_peaks(self, it, permute_count, noise_level, grid_buffers,
                            sign, pnum, grid_restraint, q, verbose):
 
@@ -1054,6 +1098,7 @@ class ucsfTool:
         chunk_count = int(permute_count / chunk_size) + 1
         cur_percent = -1
         peaks, heights = [], []
+        #allsize = len(it)
         for i in range(chunk_count):
             if verbose and self.nproc == 1:
                 tmp_percent = int(float(i+1) / float(chunk_count) * 10.0)
@@ -1061,7 +1106,8 @@ class ucsfTool:
                     cur_percent = tmp_percent
                     print_log(datetime.datetime.now())
                     print_log('Find peaks: %d / %d (%3d %%)' % (i+1, chunk_count, cur_percent*10))
-            pts = tuple(itertools.islice(it, chunk_size))
+            pts = list(itertools.islice(it, chunk_size))
+            #pts = it[i*chunk_size:min((i+1)*chunk_size, allsize)]
             pks, hts = self.find_peaks_per_node(pts, noise_level,
                                                 grid_buffers, sign,
                                                 pnum, grid_restraint)
@@ -1136,12 +1182,12 @@ class ucsfTool:
         for i in range(npt):
             grid_pt = pts[i]
             
-            if tf:
-                diff = 0
-                for j in range(len(grid_buffers)):
-                    diff += abs(prev_grid_pt[j]-grid_pt[j])
-                if diff < sgb:
-                    continue  # neighbor is maximum. No need to evaluate
+            #if tf:
+            #    diff = 0
+            #    for j in range(len(grid_buffers)):
+            #        diff += abs(prev_grid_pt[j]-grid_pt[j])
+            #    if diff < sgb:
+            #        continue  # neighbor is maximum. No need to evaluate
 
             temp_hts = self.get_data(grid_pt)
             atemp_hts = abs(temp_hts)
@@ -1150,8 +1196,8 @@ class ucsfTool:
             if len(grid_peaks) > self.max_count and atemp_hts < self.min_heights[pnum]:
                 continue
 
-            if (temp_hts < noise_level and sign == 1) or \
-               (temp_hts > noise_level and sign == -1) or \
+            if (temp_hts < ahts and sign == 1) or \
+               (temp_hts > ahts * -1.0 and sign == -1) or \
                (temp_hts * sign < 0):
                 continue
 

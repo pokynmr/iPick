@@ -222,6 +222,7 @@ def main():
                                     'sign': peak_sign,
                                     'verbose': True}, '__main__')
         grid_peaks = m['grid_peaks']
+        grid_hts = m['grid_hts']
     else:
         print_log('Using NMRGLUE to detect local maxima.')
 
@@ -242,11 +243,19 @@ def main():
     # interpolation and get adjusted data heights
     print_log('Using UCSFTOOL to interpolate and obtain adjusted heights.')
     peak_list, hts_list = [], []
-    for grid_peak in grid_peaks:
-        grid_pt = ()
-        for i in range(ndim):
-            grid_pt += (int(grid_peak[i]),)
-        shifts, value = ut.get_interpolated_data(grid_pt)
+    for i in range(len(grid_peaks)):
+        grid_peak, grid_ht = grid_peaks[i], grid_hts[i]
+        #print(grid_ht)
+        #print(grid_peak)
+        #grid_pt = ()
+        #for i in range(ndim):
+        #    grid_pt += (int(grid_peak[i]),)
+        #shifts, value = ut.get_interpolated_data(grid_pt)
+        #shifts = ut.grids_to_shifts(grid_peak)
+        #value = grid_ht
+        shifts, value = ut.get_interpolated_data(grid_peak, noiselevel)
+        if shifts == None:
+            continue
         peak_list.append(shifts)
         hts_list.append(value)
 
