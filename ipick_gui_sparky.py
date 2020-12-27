@@ -44,7 +44,6 @@ sys.path.append(IPICK_PATH)
 try:
     import iPick
 except ImportError:
-    print('Could not find iPick to import')
     tkMessageBox.showwarning(title='Error', message='Could not find iPick!')
 
 OS_WINDOWS = False
@@ -77,6 +76,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.import_drop = 0.0
     self.auto_integration = True
     self.spectrum = None
+    self.previous_spectrum = None
+    self.last_PEAKLIST_FILE = None
+    self.spectrum_list_selection = None
 
 
     tkutil.Dialog.__init__(self, session.tk, 'iPick (Integrated UCSF Peak Picker)')
@@ -304,6 +306,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.a_noise = tkutil.entry_field(a_nois_cont_but_frm, 'Noise Level: ', width=16)
     self.a_noise.entry.bind('<Return>', self.noise_level)
+
     #self.a_noise.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_noise_button, 'Get the automatic noise level selection')
     tkutil.create_hint(self.a_noise.frame, 'The automatic noise level is shown here. You can change it as you like.')
@@ -420,7 +423,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     integration_radio_button2.pack(side='left')
     tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
 
-    integration_option_button = tk.Button(self.a_integration_radio_frm, text='Options', command=self.open_integration_options)
+    integration_option_button = tk.Button(self.a_integration_radio_frm, text='Options', font=buttonFont, command=self.open_integration_options)
     integration_option_button.pack(side='left', padx=(5,0))
 
     self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(5,0), padx=5)
@@ -487,6 +490,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.update_tree()
     self.basic_frame_show()
+    self.top.bind('<ButtonRelease-1>', self.refocus_spec_list)
 
 
 
@@ -535,6 +539,23 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 # ---------------------------------------------------------------------------
+  def refocus_spec_list(self, *args):
+    if self.spectrum_list_selection == None:
+        return
+
+    if (self.basic_adv == 'basic'):
+        widget = self.b_tree
+    else:
+        widget = self.a_tree
+
+    widget.listbox.select_clear(0, "end")
+    widget.listbox.selection_set(self.spectrum_list_selection)
+    widget.listbox.see(self.spectrum_list_selection)
+    widget.listbox.activate(self.spectrum_list_selection)
+    widget.listbox.selection_anchor(self.spectrum_list_selection)
+
+
+# ---------------------------------------------------------------------------
   def open_integration_options(self):
     self.session.command_characters('it')
 
@@ -547,21 +568,21 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def show_peak_list(self, *args):
-      spectrum = self.session.selected_spectrum()
-      if spectrum == None:
+      if self.spectrum == None:
+        tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
 
       if not hasattr(self.session, 'spectrum_dialogs'):
         self.session.spectrum_dialogs = {}
       dialogs = self.session.spectrum_dialogs
-      if (dialogs.has_key(spectrum) and not dialogs[spectrum].is_window_destroyed()):
-        dialogs[spectrum].show_window(1)
+      if (dialogs.has_key(self.spectrum) and not dialogs[self.spectrum].is_window_destroyed()):
+        dialogs[self.spectrum].show_window(1)
       else:
         d = peak_list_dialog(self.session)
         d.show_window(1)
         d.settings.show_fields('Assignment', 'Chemical Shift', 'Reliability Score')
-        d.show_spectrum_peaks(spectrum)
-        dialogs[spectrum] = d
+        d.show_spectrum_peaks(self.spectrum)
+        dialogs[self.spectrum] = d
 
 
 # ---------------------------------------------------------------------------
@@ -661,6 +682,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_contour.variable.set('')
     self.a_noise.variable.set('')
 
+    self.spectrum_list_selection = idx
+
 
 # ---------------------------------------------------------------------------
   def noise_level(self):
@@ -688,6 +711,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def contour_level(self):
+
+    if self.spectrum == None:
+        tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
+        return
+
     if (self.pos_neg.get() == '1'):
         self.a_contour.variable.set(self.pos_contour)
 
@@ -792,6 +820,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if self.spectrum == None:
         tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
+
+    if self.previous_spectrum == self.spectrum:
+        confirmation = tkMessageBox.askokcancel(title='Re-run iPick?',
+             message='You have already run iPick for this experiment. Do you want to run it again?')
+
+        if confirmation == False:
+            return
 
     self.set_resolution()
 
@@ -914,6 +949,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_stop_button['state'] = 'disabled'
     self.b_stop_button['state'] = 'disabled'
 
+    self.previous_spectrum = self.spectrum
+
 
 # ---------------------------------------------------------------------------
   def distance(self, p1, p2):
@@ -940,6 +977,18 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.config(text="Status: Importing the peaks ...")
     status.update()
 
+    try:
+        print("Importing the peaks from: " + self.PEAKLIST_FILE)
+    except:
+        tkMessageBox.showwarning(title='Error', message='You need to run iPick first!')
+        return
+
+    if self.last_PEAKLIST_FILE == self.PEAKLIST_FILE:
+        confirmation = tkMessageBox.askokcancel(title='Continue?',
+             message='You have already imported these peaks. Do you want to import them again?')
+        if confirmation == False:
+            self.show_peak_list()
+            return
 
     peaks = open(self.PEAKLIST_FILE, 'r').readlines()
     if len(peaks) < 4:
@@ -950,7 +999,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if len(peaks) > 5000:
         confirmation = tkMessageBox.askokcancel(title='Continue?',
              message='iPick will try to import ' + str(len(peaks)) + ' peaks. This can take a long time. Do you want to continue?')
-
         if confirmation == False:
             self.show_peak_list()
             return
@@ -1064,6 +1112,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     time.sleep(0.3)     # a delay is needed for the peak list to update
     self.show_peak_list()    # show _our_ peak list instead of the default one
 
+    self.last_PEAKLIST_FILE = self.PEAKLIST_FILE
 
 
 #####################################################################################
@@ -1185,8 +1234,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
         xcheck.show_xcheck_dialog(self.session)
 
     except:
-        print('Could not find Cross Validation module to import')
-        tkMessageBox.showwarning(title='Error', message='Could not find Cross Validation module!')
+        tkMessageBox.showwarning(title='Error', message='Could not find the Cross Validation module!')
 
   # ---------------------------------------------------------------------------
   #
