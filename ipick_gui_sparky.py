@@ -178,7 +178,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #update_button.pack(side='left', anchor='w', expand=0)
 
 
-    b_ipick_button = tk.Button(b_buttons_frm, text='Pick list', command=self.show_pick_list)
+    b_ipick_button = tk.Button(b_buttons_frm, text='Peak list', command=self.show_peak_list)
     b_ipick_button.pack(side='left')
     tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
 
@@ -441,7 +441,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #a_update_button.pack(side='left', anchor='w', expand=0)
 
 
-    a_ipick_button = tk.Button(a_buttons_frm, text='Pick list', command=self.show_pick_list)
+    a_ipick_button = tk.Button(a_buttons_frm, text='Peak list', command=self.show_peak_list)
     a_ipick_button.pack(side='left')
     tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
 
@@ -538,7 +538,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 # ---------------------------------------------------------------------------
-  def show_pick_list(self, *args):
+  def show_peak_list(self, *args):
       spectrum = self.session.selected_spectrum()
       if spectrum == None:
         return
@@ -959,11 +959,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     if len(peaks) > 5000:
-        confirmation = tkMessageBox.askyesno(title='Continue?',
+        confirmation = tkMessageBox.askokcancel(title='Continue?',
              message='iPick will try to import ' + str(len(peaks)) + ' peaks. This can take a long time. Do you want to continue?')
 
         if confirmation == False:
-            self.show_pick_list()
+            self.show_peak_list()
             return
 
 
@@ -1088,7 +1088,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     #self.session.command_characters('lt')
     time.sleep(0.3)     # a delay is needed for the peak list to update
-    self.show_pick_list()    # show _our_ peak list instead of the default one
+    self.show_peak_list()    # show _our_ peak list instead of the default one
 
 
 
@@ -1200,6 +1200,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.pl.listbox.bind('<KeyPress>', keypress_cb)
 
     tkutil.Stoppable.__init__(self, progress_label, cv.buttons[2])
+    self.sort_reliability()
 
   # ---------------------------------------------------------------------------
   #
@@ -1353,6 +1354,8 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
   #
   def sort_reliability(self):
 
+    self.update_peaks()
+
     self.progress_report('Sorting peaks by reliability')
     if self.spectrum:
       peaks = self.spectrum.peak_list()
@@ -1399,19 +1402,22 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     threshold = float(self.remove_rs0_thresh.variable.get())
     delete_count = 0
 
-    confirmation = tkMessageBox.askyesno(title='Remove peaks?',
+    confirmation = tkMessageBox.askokcancel(title='Remove peaks?',
              message='Do you want to remove peaks with ABSOLUTE Reliability Score of ' + str(threshold) + ' and less?')
 
     if confirmation == True:
         for peak in peaks:
-            if peak.is_assigned == 1:
-            # we won't delete a peak that the user has assigned
-                continue
+            try:
+                if peak.is_assigned == 1:
+                # we won't delete a peak that the user has assigned
+                    continue
 
-            if abs(reliability_score(peak)) <= threshold:
-                peak.selected = 1
-                self.session.command_characters("")
-                delete_count += 1
+                if abs(reliability_score(peak)) <= threshold:
+                    peak.selected = 1
+                    delete_count += 1
+                    self.session.command_characters("")
+            except:
+                continue
 
         print(str(delete_count) + ' peaks were removes')
 
@@ -1444,8 +1450,6 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
       if field.onoff:
 	    heading = heading + field.heading(dim)
     return heading
-
-
 
 # -----------------------------------------------------------------------------
 #
@@ -1507,7 +1511,6 @@ class peak_list_field:
       field.onoff = self.checkbutton.state()
     def set_widget_state(self, field):
       self.checkbutton.set_state(field.onoff)
-
 
 # ---------------------------------------------------------------------------
 #

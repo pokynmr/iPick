@@ -472,7 +472,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 # ---------------------------------------------------------------------------
   def remove_peaks(self, *args):
 
-    confirmation = tkMessageBox.askyesno(title='Remove peaks?',
+    confirmation = tkMessageBox.askokcancel(title='Remove peaks?',
              message='Do you want to remove peaks that have to corresponding peaks (determined by cross validation)?')
 
     if confirmation == True:
