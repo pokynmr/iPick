@@ -253,7 +253,7 @@ def main():
         #shifts, value = ut.get_interpolated_data(grid_pt)
         #shifts = ut.grids_to_shifts(grid_peak)
         #value = grid_ht
-        shifts, value = ut.get_interpolated_data(grid_peak)
+        shifts, value = ut.get_interpolated_data(grid_peak, noise_level = noiselevel)
         if shifts == None:
             continue
         peak_list.append(shifts)

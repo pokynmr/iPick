@@ -150,6 +150,19 @@ def stddev(data, ddof=0):
     pvar = ss/(n-ddof)
     return pvar**0.5
 
+def get_memsize():
+  if OS_WINDOWS:
+    process = os.popen('wmic memorychip get capacity')
+    result = process.read()
+    process.close()
+    totalMem = 0
+    for m in result.split("  \r\n")[1:-1]:
+        totalMem += int(m)
+  elif sys.platform == 'darwin':
+    totalMem = int(os.popen('sysctl hw.memsize').read().strip().split()[1])
+  else:
+    totalMem = int(os.popen('free -tb').readlines()[1].split()[3])
+  return totalMem
 
 class ucsfTool:
     # ---------------------------------------------------------------------------
@@ -383,11 +396,13 @@ class ucsfTool:
         # If memory is enough, load all the data first.
         # This will be significantly fast when multiprocessing is activated
         try:
-            free_mem = int(os.popen('free -tb').readlines()[1].split()[3])
+            free_mem = get_memsize()
+            print('Memory check %d.' % (free_mem))
             if self.file_size * 3 < free_mem and cache_mode:
                 self.file_object[0].seek(0, 0)
                 self.cache_data = bytes(self.file_object[0].read())
         except Exception:
+            print('Memory check failed.')
             pass
 
     # ---------------------------------------------------------------------------
@@ -742,10 +757,10 @@ class ucsfTool:
             print_log('Error in ucsfTool:get_data()- file is not opened')
             return None
         tile_indices, remain_pt = self.grid_to_tile_and_remain_indices(grid_pt)
-        fdidx = self.get_fdidx(grid_pt[0])
-        if fdidx == None:
-            return 0.
-        #fdidx = min(int(float(grid_pt[0]) / self.fd_divider), self.nproc-1)
+        #fdidx = self.get_fdidx(grid_pt[0])
+        #if fdidx == None:
+        #    return 0.
+        fdidx = min(int(float(grid_pt[0]) / self.fd_divider), self.nproc-1)
         remain_index = self.remain_indices_to_remain_index(remain_pt)
         # if self.cache_data == None:
         tile_data = self.read_tile_data(tile_indices, fd=fdidx)
@@ -1009,8 +1024,8 @@ class ucsfTool:
         # divide for parallelization: dim 1
         x_range = list(map(lambda x: [], range(self.nproc)))
         for i in range(len(range_list[0])):
-            xidx = self.get_fdidx(range_list[0][i])
-            #xidx = min(int(float(range_list[0][i]) / self.fd_divider), self.nproc-1)
+            #xidx = self.get_fdidx(range_list[0][i])
+            xidx = min(int(float(range_list[0][i]) / self.fd_divider), self.nproc-1)
             x_range[xidx].append(range_list[0][i])
 
         it_list = []
@@ -1182,10 +1197,10 @@ class ucsfTool:
         for i in range(npt):
             grid_pt = pts[i]
             
-            #if tf:
-            #    diff = 0
-            #    for j in range(len(grid_buffers)):
-            #        diff += abs(prev_grid_pt[j]-grid_pt[j])
+            if tf:
+                diff = 0
+                for j in range(len(grid_buffers)):
+                    diff += abs(prev_grid_pt[j]-grid_pt[j])
             #    if diff < sgb:
             #        continue  # neighbor is maximum. No need to evaluate
 
@@ -1212,6 +1227,10 @@ class ucsfTool:
             #    break
 
             if tf:
+                if diff < sgb:
+                    prev_hts = self.get_data(prev_grid_pt)
+                    if abs(prev_hts) > ahts:
+                        continue
                 grid_peaks.append(grid_pt)
                 heights.append(hts)
                 prev_grid_pt = grid_pt
