@@ -856,10 +856,10 @@ class ucsfTool:
     for pt in pt_list:
       if grid_pt == pt: continue
       temp_ht = self.get_data(pt)
-      if (temp_ht < std_ht * 0.2 and sign == 1) or \
-          (temp_ht > std_ht * 0.2 and sign == -1) or \
-          (abs(temp_ht) < astd_ht * 0.2 and sign == 0):
-        return False, std_ht
+      #if (temp_ht < std_ht * 0.1 and sign == 1) or \
+      #    (temp_ht > std_ht * 0.1 and sign == -1) or \
+      #    (abs(temp_ht) < astd_ht * 0.1 and sign == 0):
+      #  return False, std_ht
       if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
           or (abs(temp_ht) > astd_ht and sign == 0):
         return False, std_ht
@@ -1815,7 +1815,7 @@ def auto_picking(in_filename, out_filename=None, grid_buffers=None, \
                     threshold=None, nproc = 2, verbose=False):
   print_log("""
   Automated Peak Picking by ucsfTool
-  by Woonghee Lee (whlee@nmrfam.wisc.edu)
+  by Woonghee Lee (woonghee.lee@ucdenver.edu)
 
   """)
   import datetime

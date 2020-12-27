@@ -6,9 +6,8 @@ UCSF tool.
 -----------------------------------------------------------------------------
 
 Developed by Woonghee Lee
-e-mail: whlee@nmrfam.wisc.edu
-National Magnetic Resonance Facilities at Madison
-Department of Bichemistry, University of Wisconsin at Madison
+e-mail: woonghee.lee@ucdenver.edu
+Department of Chemistry, University of Colorado Denver
 
 Last updated: December 10, 2019
 
@@ -19,7 +18,7 @@ Developed since July, 2018
 
 BSD 2-Clause License
 
-Copyright (c) Woonghee Lee (whlee@nmrfam.wisc.edu
+Copyright (c) Woonghee Lee (woonghee.lee@ucdenver.edu)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -870,10 +869,10 @@ class ucsfTool:
             if grid_pt == pt:
                 continue
             temp_ht = self.get_data(pt)
-            if (temp_ht < std_ht * 0.2 and sign == 1) or \
-                    (temp_ht > std_ht * 0.2 and sign == -1) or \
-                    (abs(temp_ht) < astd_ht * 0.2 and sign == 0):
-                return False, std_ht            
+            #if (temp_ht < std_ht * 0.1 and sign == 1) or \
+            #        (temp_ht > std_ht * 0.1 and sign == -1) or \
+            #        (abs(temp_ht) < astd_ht * 0.1 and sign == 0):
+            #    return False, std_ht            
             if (temp_ht > std_ht and sign == 1) or \
                     (temp_ht < std_ht and sign == -1) or \
                     (abs(temp_ht) > abs(std_ht) and sign == 0):
@@ -1838,7 +1837,7 @@ def auto_picking(in_filename, out_filename=None, grid_buffers=None,
                  threshold=None, nproc=2, verbose=False):
     print_log("""
     Automated Peak Picking by ucsfTool
-    by Woonghee Lee (whlee@nmrfam.wisc.edu)
+    by Woonghee Lee (woonghee.lee@ucdenver.edu)
 
     """)
     print_log(datetime.datetime.now())
