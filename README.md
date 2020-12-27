@@ -93,7 +93,7 @@ ____________________________________________________
 
 ## WINDOWS USERS
 
-The iPick program runs natively on Mac, Linux and Windows. However, multithreading is limited in Windows due to its kernel architecture. To overcome this issue, a user can use WSL2 (Windows Subsystem for Linux) and install the linux64 version of NMRFAM-SPARKY. 
+The iPick program runs natively on Mac, Linux and Windows. However, multithreading of Python is limited in Windows due to its kernel architecture. To overcome this issue, a user can use WSL2 (Windows Subsystem for Linux) and install the linux64 version of NMRFAM-SPARKY. 
 
 https://www.windowscentral.com/how-install-wsl2-windows-10
 
