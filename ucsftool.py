@@ -824,42 +824,57 @@ class ucsfTool:
   # ---------------------------------------------------------------------------
   # Check if this grid is the maximum
   #
-  def is_local_maxima(self, grid_pt, grid_buffers, sign = 1, ref_ht = None):
+  def is_local_maxima(self, grid_pt, grid_buffers, sign = 1, ref_ht = None,
+                    simple=False):
     if ref_ht == None:  std_ht = self.get_data(grid_pt)
     else: std_ht = ref_ht
     if std_ht * sign < 0:
       return False, std_ht 
-
-    if len(grid_pt) == 2:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
-                                   grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1],
-                                   grid_pt[1]+grid_buffers[1]+1))
-    elif len(grid_pt) == 3:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
-                                   grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1],
-                                   grid_pt[1]+grid_buffers[1]+1),
-                             range(grid_pt[2]-grid_buffers[2],
-                                   grid_pt[2]+grid_buffers[2]+1))
-    elif len(grid_pt) == 4:
-      it = itertools.product(range(grid_pt[0]-grid_buffers[0],
-                                   grid_pt[0]+grid_buffers[0]+1),
-                             range(grid_pt[1]-grid_buffers[1],
-                                   grid_pt[1]+grid_buffers[1]+1),
-                             range(grid_pt[2]-grid_buffers[2],
-                                   grid_pt[2]+grid_buffers[2]+1),
-                             range(grid_pt[3]-grid_buffers[3],
-                                   grid_pt[3]+grid_buffers[3]+1))
-    pt_list = tuple(it)
     astd_ht = abs(std_ht)
+    ndim = len(grid_pt)
+
+    if not simple:
+      if ndim == 2:
+        it = itertools.product(range(grid_pt[0]-grid_buffers[0],
+                                    grid_pt[0]+grid_buffers[0]+1),
+                              range(grid_pt[1]-grid_buffers[1],
+                                    grid_pt[1]+grid_buffers[1]+1))
+      elif ndim == 3:
+        it = itertools.product(range(grid_pt[0]-grid_buffers[0],
+                                    grid_pt[0]+grid_buffers[0]+1),
+                              range(grid_pt[1]-grid_buffers[1],
+                                    grid_pt[1]+grid_buffers[1]+1),
+                              range(grid_pt[2]-grid_buffers[2],
+                                    grid_pt[2]+grid_buffers[2]+1))
+      elif ndim == 4:
+        it = itertools.product(range(grid_pt[0]-grid_buffers[0],
+                                    grid_pt[0]+grid_buffers[0]+1),
+                              range(grid_pt[1]-grid_buffers[1],
+                                    grid_pt[1]+grid_buffers[1]+1),
+                              range(grid_pt[2]-grid_buffers[2],
+                                    grid_pt[2]+grid_buffers[2]+1),
+                              range(grid_pt[3]-grid_buffers[3],
+                                    grid_pt[3]+grid_buffers[3]+1))
+      pt_list = tuple(it)
+    else:      
+      pt = list(grid_pt)
+      for i in range(ndim):
+        for j in range(1, grid_buffers[i] + 1):
+          pt[i] = grid_pt[i] - j
+          temp_ht = self.get_data(pt)
+          if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
+              or (abs(temp_ht) > astd_ht and sign == 0):
+            return False, std_ht        
+          pt[i] = grid_pt[i] + j
+          if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
+              or (abs(temp_ht) > astd_ht and sign == 0):
+            return False, std_ht        
+        pt[i] = grid_pt[i]
+      return True, std_ht
+    
     for pt in pt_list:
       if grid_pt == pt: continue
       temp_ht = self.get_data(pt)
-      #if (temp_ht < std_ht * 0.1 and sign == 1) or \
-      #    (temp_ht > std_ht * 0.1 and sign == -1) or \
-      #    (abs(temp_ht) < astd_ht * 0.1 and sign == 0):
-      #  return False, std_ht
       if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
           or (abs(temp_ht) > astd_ht and sign == 0):
         return False, std_ht
@@ -1138,12 +1153,13 @@ class ucsfTool:
         continue
 
       # check if it is local maxima in 1D->2D->3D->4D
-      for j in range(ndim):
-        tf, hts = self.is_local_maxima(grid_pt,
-                    grid_buffers[0:1+j] + zl[4-ndim+j],
-                    sign, ref_ht = temp_hts)
-        if not tf:
-          break
+      #for j in range(ndim):
+      j = ndim-1
+      tf, hts = self.is_local_maxima(grid_pt,
+                  grid_buffers[0:1+j] + zl[4-ndim+j],
+                  sign, ref_ht = temp_hts)
+      #if not tf:
+      #  break
 
       if tf:
         grid_peaks.append(grid_pt)
