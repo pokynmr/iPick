@@ -75,7 +75,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.resolution = '1'
     self.import_dist = 0.0
     self.import_drop = 0.0
-    self.auto_integration = False
+    self.auto_integration = True
 
 
     tkutil.Dialog.__init__(self, session.tk, 'iPick (Integrated UCSF Peak Picker)')
@@ -393,7 +393,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #a_integration_label.pack(side='left')
 
     self.a_check_integration = tk.BooleanVar()
-    self.a_check_integration.set(False)
+    self.a_check_integration.set(True)
     a_checkbox_integration = tk.Checkbutton(a_integration_frm, highlightthickness=0, text='Auto Integration',
                                             variable=self.a_check_integration, command=self.integration_check)
     a_checkbox_integration.pack(side='left', anchor='w', padx=(30,0))
@@ -419,6 +419,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     integration_radio_button2.pack(side='left')
     tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
 
+    self.a_integration_radio_frm.pack(side='top', fill='both', expand=1, pady=(10,0), padx=10)
 
     # separator
     #sep = tk.Frame(a_btmfrm, height=2, bd=1, relief="ridge")
@@ -880,7 +881,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         else:
             widget = self.a_status
 
-        widget.config(text="Status: File is corrupted.")
+        widget.config(text="Status: Peak list file is corrupted.")
         widget.update()
         print(e)
         print(sys.exc_type)
@@ -907,12 +908,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                 widget = self.b_status
             else:
                 widget = self.a_status
-            widget.config(text="Status: peak picking is done.")
+            widget.config(text="Status: Peak picking is done.")
             widget.update()
 
             print('Found peaks are also stored in "' + self.PEAKLIST_FILE + '" file.')
 
-            tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
+            #tkMessageBox.showinfo(title='Job Done!', message='Peak picking is finished!')
 
 
             if ((self.basic_adv == 'basic') and self.b_check_import.get()) or \
@@ -1082,7 +1083,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.update()
 
     print('\nImport Completed! ' + str(placed_peaks) + ' new peaks are placed on the spectrum.')
-    tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
+    #tkMessageBox.showinfo(title='Import Completed!', message=str(placed_peaks) + ' peaks are placed on the spectrum.')
 
     #self.session.command_characters('lt')
     time.sleep(0.3)     # a delay is needed for the peak list to update
