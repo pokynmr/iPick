@@ -1105,18 +1105,18 @@ class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
     main_frame.pack(side='top', fill='both', expand=1, padx=10, pady=10)
 
     instruction_label = tk.Label(main_frame, justify='left',
-                                 text="Please open the Integration tool (two-letter-code it) for \neach experiment (select the spectra window and type \"it\") \nand then change the setting based on the picture below. \nYou need to repeat this for each experiment.")
-    instruction_label.pack(side='top', anchor='w', pady=(0,20))
+                                 text="Please open the Integration tool (two-letter-code it) for \neach experiment (select the spectra window and type \"it\") \nand then change the settings as follows. \nYou need to repeat this for each experiment.\n\n1. Change the Integration method to \"Pseudo-Voigt fit\"\n2. Un-check all the checkboxes.\n3. Check the \"Group peaks in contour boundary\".")
+    instruction_label.pack(side='top', anchor='w', pady=(0,10))
 
     #from PIL import ImageTk, Image
     #results in:
     #ImportError: The _imaging C module is not installed
 
-    widget = tk.Label(main_frame, compound='top')
-    widget.image = tk.PhotoImage(file=os.path.join(IPICK_PATH, 'fit.png'))
-    widget['image'] = widget.image
-    widget.pack()
-    tkutil.create_hint(widget, 'This is a picture of the settings you need to apply')
+#    widget = tk.Label(main_frame, compound='top')
+#    widget.image = tk.PhotoImage(file=os.path.join(IPICK_PATH, 'fit.png'))
+#    widget['image'] = widget.image
+#    widget.pack()
+#    tkutil.create_hint(widget, 'This is a picture of the settings you need to apply')
 
     close_instruction_label = tk.Label(main_frame, justify='left',
                                        text="You can close this window when you applied the changes \nin each Integration tool window.\n\nNote: the fitting process can take a long time when there \nare many peaks in your experiment.")
