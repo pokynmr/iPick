@@ -768,6 +768,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                " -o " + self.PEAKLIST_FILE +
                " -r " + self.resolution +
                " -c " + CPUs +
+               " --sign " + self.pos_neg.get() +
                " --threshold " + self.a_contour.variable.get() +
                " --overwrite")
 
@@ -994,6 +995,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     spec_peaks = spec.peak_list()
     #print spec_peaks[1].frequency[0]
 
+    print spec.scale_offset
+
     print('\n\nCurrent peaks in the spectra: ' + str(len(spec_peaks)))
     print('New peaks to be processed: ' + str(len(peaks)-2) + '\n')
 
@@ -1011,8 +1014,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     for i in range(2, len(peaks)):
         self.top.update()
-        new_peak = peaks[i].split()[1:-1]   # also removes the first and last columns from the peak list file
-        new_peak = tuple(float(e) for e in new_peak)
+        new_peak_list = peaks[i].split()[1:-1]   # also removes the first and last columns from the peak list file
+        new_peak_tuple = tuple(float(e) for e in new_peak_list)
+        new_peak = tuple(map(lambda i, j: i + j, new_peak_tuple, spec.scale_offset))
+
         new_peak_flag = True
 
         if spec_peaks == []:
@@ -1171,7 +1176,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
                                                 width=12, initial='100.0')
     self.remove_rs0_thresh.frame.pack(side='left', padx=(5,5))
     tkutil.create_hint(self.remove_rs0_thresh.frame,
-                       'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
+                       'Remove peaks with "ABSOLUTE Reliability Score" at and below this threshold')
 
     remove_rs0_button = tk.Button(rs_frame, text='Remove', command=self.remove_rs0)
     remove_rs0_button.pack(side='left')
@@ -1397,7 +1402,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     delete_count = 0
 
     confirmation = tkMessageBox.askyesno(title='Remove peaks?',
-             message='Do you want to remove peaks with ABSOLUTE Reliability Score below ' + str(threshold) + '?')
+             message='Do you want to remove peaks with ABSOLUTE Reliability Score of ' + str(threshold) + ' and less?')
 
     if confirmation == True:
         for peak in peaks:
@@ -1405,7 +1410,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
             # we won't delete a peak that the user has assigned
                 continue
 
-            if abs(reliability_score(peak)) < threshold:
+            if abs(reliability_score(peak)) <= threshold:
                 peak.selected = 1
                 self.session.command_characters("")
                 delete_count += 1
