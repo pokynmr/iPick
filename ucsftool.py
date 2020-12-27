@@ -992,9 +992,9 @@ class ucsfTool:
         heights += hts
       else:
         t = multiprocessing.Process(target=self.process_find_peaks,
-                                    args=[it, permute_count, noise_level, 
-                                    grid_buffers, sign, i, grid_restraint, 
-                                    q, verbose])
+                                      args=[it, permute_count, noise_level, 
+                                      grid_buffers, sign, i, grid_restraint, 
+                                      q, verbose])
 
         t.start()
         process_list.append(t)
@@ -1890,7 +1890,3 @@ if __name__=="__main__":
     multiprocessing.freeze_support()
     grid_peaks, _ = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign, 
                               verbose=verbose)
-
-#      def find_peaks(self, noise_level, grid_buffers, sign=1,
-#                  shift_restraint=None, shift_grid_buffers=None,
-#                  max_count=None, verbose=True):
