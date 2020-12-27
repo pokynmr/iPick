@@ -3,12 +3,12 @@
 """
 Integrated UCSF Peak Picker v0.1.
 
-by Woonghee Lee (whlee@nmrfam.wisc.edu)
+by Woonghee Lee (woonghee.lee@ucdenver.edu)
 
 
 BSD 2-Clause License
 
-Copyright (c) 2020, LeeGroup
+Copyright (c) 2020, Lee Group
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -40,14 +40,14 @@ import time
 import tempfile
 
 if sys.version_info[0] == 2:
-    import ucsftool
+  import ucsftool
 else:
-    import ucsftool3 as ucsftool
+  import ucsftool3 as ucsftool
 
 ut = ucsftool.ucsfTool()
 
 DESC = '\nIntegrated UCSF Peak Picker v0.1\n\t\
-    by Woonghee Lee (whlee@nmrfam.wisc.edu)\n'
+    by Woonghee Lee (woonghee.lee@ucdenver.edu)\n'
 
 NMRGLUE_PATH = 'nmrglue-0.7'
 UCSFTOOL_PATH = '.'
@@ -209,7 +209,19 @@ def main():
             res = [args.res] * ndim
         print_log('Resolution setting: ', res[0])
         peak_sign = int(args.sign)
-        grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
+        #grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
+        import runpy
+        if sys.version_info[0] == 2:
+            mname = 'ucsftool'
+        else:
+            mname = 'ucsftool3'
+        m = runpy.run_module(mname, {'ut': ut,
+                                    'func': 'find_peaks',
+                                    'noiselevel': noiselevel,
+                                    'res': res,
+                                    'sign': peak_sign,
+                                    'verbose': True}, '__main__')
+        grid_peaks = m['grid_peaks']
     else:
         print_log('Using NMRGLUE to detect local maxima.')
 

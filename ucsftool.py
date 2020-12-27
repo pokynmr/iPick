@@ -856,10 +856,10 @@ class ucsfTool:
     for pt in pt_list:
       if grid_pt == pt: continue
       temp_ht = self.get_data(pt)
-      if (temp_ht < std_ht * 0.2 and sign == 1) or \
-          (temp_ht > std_ht * 0.2 and sign == -1) or \
-          (abs(temp_ht) < astd_ht * 0.2 and sign == 0):
-        return False, std_ht
+      #if (temp_ht < std_ht * 0.1 and sign == 1) or \
+      #    (temp_ht > std_ht * 0.1 and sign == -1) or \
+      #    (abs(temp_ht) < astd_ht * 0.1 and sign == 0):
+      #  return False, std_ht
       if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) \
           or (abs(temp_ht) > astd_ht and sign == 0):
         return False, std_ht
@@ -986,13 +986,15 @@ class ucsfTool:
 
       # the multiprocessing is not working properly in Windows
       if OS_WINDOWS:
-        grid_peaks, heights = self.process_find_peaks_windows(it, permute_count, 
+        pks, hts = self.process_find_peaks_windows(it, permute_count, 
             noise_level, grid_buffers, sign, i, grid_restraint, q, verbose)
-
+        grid_peaks += pks
+        heights += hts
       else:
         t = multiprocessing.Process(target=self.process_find_peaks,
-                                    args=[it, permute_count, noise_level, grid_buffers,
-                                    sign, i, grid_restraint, q, verbose])
+                                      args=[it, permute_count, noise_level, 
+                                      grid_buffers, sign, i, grid_restraint, 
+                                      q, verbose])
 
         t.start()
         process_list.append(t)
@@ -1003,17 +1005,6 @@ class ucsfTool:
         heights += hts
       for t in process_list:
         t.join()
-#      t = multiprocessing.Process(target=self.process_find_peaks,
-#                          args=[it, permute_count, noise_level, grid_buffers,
-#                          sign, i, grid_restraint, q, verbose])
-#      t.start()
-#      process_list.append(t)
-#    for t in process_list:
-#      pks, hts = q.get()
-#      grid_peaks += pks
-#      heights += hts
-#    for t in process_list:
-#      t.join()
       
     if verbose and self.nproc != 1:
       print_log(datetime.datetime.now())
@@ -1824,7 +1815,7 @@ def auto_picking(in_filename, out_filename=None, grid_buffers=None, \
                     threshold=None, nproc = 2, verbose=False):
   print_log("""
   Automated Peak Picking by ucsfTool
-  by Woonghee Lee (whlee@nmrfam.wisc.edu)
+  by Woonghee Lee (woonghee.lee@ucdenver.edu)
 
   """)
   import datetime
@@ -1889,7 +1880,13 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None, \
   ut.ucsf_close()
   print_log(datetime.datetime.now())
 
+grid_peaks = []
 if __name__=="__main__":
-  print_log('List of available functions:')
-  ut=ucsfTool()
-  ut.help()
+  if func != 'find_peaks':
+    print_log('List of available functions:')
+    ut=ucsfTool()
+    ut.help()
+  else:
+    multiprocessing.freeze_support()
+    grid_peaks, _ = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign, 
+                              verbose=verbose)
