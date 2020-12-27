@@ -995,8 +995,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     spec_peaks = spec.peak_list()
     #print spec_peaks[1].frequency[0]
 
-    print spec.scale_offset
-
     print('\n\nCurrent peaks in the spectra: ' + str(len(spec_peaks)))
     print('New peaks to be processed: ' + str(len(peaks)-2) + '\n')
 
