@@ -403,6 +403,9 @@ class ucsfTool:
                 self.cache_data = bytes(self.file_object[0].read())
         except Exception:
             print('Memory check failed.')
+            if self.file_size < 1024**3 and cache_mode:
+                self.file_object[0].seek(0, 0)
+                self.cache_data = bytes(self.file_object[0].read())
             pass
 
     # ---------------------------------------------------------------------------
