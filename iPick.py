@@ -211,12 +211,16 @@ def main():
         peak_sign = int(args.sign)
         #grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
         import runpy
-        m = runpy.run_module('ucsftool', {'ut': ut,
+        if sys.version_info[0] == 2:
+            mname = 'ucsftool'
+        else:
+            mname = 'ucsftool3'
+        m = runpy.run_module(mname, {'ut': ut,
                                     'func': 'find_peaks',
                                     'noiselevel': noiselevel,
                                     'res': res,
                                     'sign': peak_sign,
-                                    'verbose': True}, '__main__', True)
+                                    'verbose': True}, '__main__')
         grid_peaks = m['grid_peaks']
     else:
         print_log('Using NMRGLUE to detect local maxima.')

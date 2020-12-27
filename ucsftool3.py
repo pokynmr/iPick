@@ -76,6 +76,7 @@ e.g. Automated peak picking
 """
 
 import os
+import sys
 import struct
 import itertools
 import datetime
@@ -92,6 +93,10 @@ unpack_float = struct.Struct('>f').unpack
 unpack_byte = struct.Struct('>B').unpack
 unpack_int = struct.Struct('>I').unpack
 pack_float = struct.Struct('>f').pack
+
+OS_WINDOWS = False
+if ((sys.platform == 'win32') or (sys.platform == 'cygwin')):
+    OS_WINDOWS = True
 
 def print_log(*args):
     msg = ''
@@ -340,7 +345,10 @@ class ucsfTool:
             return 0
 
         # self.file_object = map(lambda x: open(self.file_name,'rb', os.O_NONBLOCK), range(nproc))
-        self.file_object = [open(self.file_name, 'rb', os.O_NONBLOCK) for _ in range(nproc)]
+        if OS_WINDOWS:
+            self.file_object = [open(self.file_name, 'rb') for _ in range(nproc)]
+        else:
+            self.file_object = [open(self.file_name, 'rb', os.O_NONBLOCK) for _ in range(nproc)]
 
         self.file_object[0].seek(0, 2)  # seek_end
         self.file_size = self.file_object[0].tell()
@@ -827,7 +835,13 @@ class ucsfTool:
     # Check if this grid is the maximum
 
     def is_local_maxima(self, grid_pt, grid_buffers, sign=1, ref_ht=None):
-        pt_list = []
+        if ref_ht is None:
+            std_ht = self.get_data(grid_pt)
+        else:
+            std_ht = ref_ht
+        if std_ht * sign < 0:
+            return False, std_ht
+
         if len(grid_pt) == 2:
             it = itertools.product(range(grid_pt[0]-grid_buffers[0],
                                          grid_pt[0]+grid_buffers[0]+1),
@@ -850,15 +864,19 @@ class ucsfTool:
                                    range(grid_pt[3]-grid_buffers[3],
                                          grid_pt[3]+grid_buffers[3]+1))
         pt_list = tuple(it)
-        if ref_ht is None:
-            std_ht = self.get_data(grid_pt)
-        else:
-            std_ht = ref_ht
+        astd_ht = abs(std_ht)
+
         for pt in pt_list:
             if grid_pt == pt:
                 continue
             temp_ht = self.get_data(pt)
-            if (temp_ht > std_ht and sign == 1) or (temp_ht < std_ht and sign == -1) or (abs(temp_ht) > abs(std_ht) and sign == 0):
+            if (temp_ht < std_ht * 0.2 and sign == 1) or \
+                    (temp_ht > std_ht * 0.2 and sign == -1) or \
+                    (abs(temp_ht) < astd_ht * 0.2 and sign == 0):
+                return False, std_ht            
+            if (temp_ht > std_ht and sign == 1) or \
+                    (temp_ht < std_ht and sign == -1) or \
+                    (abs(temp_ht) > abs(std_ht) and sign == 0):
                 return False, std_ht
         return True, std_ht
 
@@ -992,19 +1010,25 @@ class ucsfTool:
                 permute_count *= len(range_list[j])
             if verbose:
                 print_log('Process %d: %d permutes' % (i+1, permute_count))
-            t = multiprocessing.Process(target=self.process_find_peaks,
-                                        args=[it, permute_count, noise_level,
-                                              grid_buffers, sign, i,
-                                              grid_restraint, q, verbose])
-            t.start()
-            process_list.append(t)
-        for t in process_list:
-        # while not q.empty():
-            pks, hts = q.get()
-            grid_peaks += pks
-            heights += hts
-        for t in process_list:
-            t.join()
+            if OS_WINDOWS:
+                pks, hts = self.process_find_peaks_windows(it, permute_count, 
+                    noise_level, grid_buffers, sign, i, grid_restraint, q, verbose)
+                grid_peaks += pks
+                heights += hts
+            else:
+                t = multiprocessing.Process(target=self.process_find_peaks,
+                                            args=[it, permute_count, noise_level,
+                                            grid_buffers, sign, i,
+                                            grid_restraint, q, verbose])
+                t.start()
+                process_list.append(t)
+        if not OS_WINDOWS:
+            for t in process_list:
+                pks, hts = q.get()
+                grid_peaks += pks
+                heights += hts
+            for t in process_list:
+                t.join()
         if verbose and self.nproc != 1:
             print_log(datetime.datetime.now())
             print_log('Find peaks: %d peaks' % (len(grid_peaks)))
@@ -1090,14 +1114,25 @@ class ucsfTool:
         grid_peaks, heights = [], []
         npt = len(pts)
         prev_grid_pt = list(map(lambda x: -2, range(len(pts))))
+        sgb = sum(grid_buffers)
         hts = noise_level
+        ahts = abs(hts)
         tf = False
-        zl = [[0, 0, 0], [0, 0], [0]]
+        ndim = len(grid_buffers)
+        zl = [[0, 0, 0], [0,0], [0], [],]
         for i in range(npt):
             grid_pt = pts[i]
+            
+            if tf:
+                diff = 0
+                for j in range(len(grid_buffers)):
+                    diff += abs(prev_grid_pt[j]-grid_pt[j])
+                if diff < sgb:
+                    continue  # neighbor is maximum. No need to evaluate
+
             temp_hts = self.get_data(grid_pt)
             atemp_hts = abs(temp_hts)
-            if atemp_hts < abs(noise_level):
+            if atemp_hts < ahts:
                 continue
             if len(grid_peaks) > self.max_count and atemp_hts < self.min_heights[pnum]:
                 continue
@@ -1107,14 +1142,9 @@ class ucsfTool:
                (temp_hts * sign < 0):
                 continue
 
-            if tf:
-                diff = 0
-                for j in range(len(grid_buffers)):
-                    diff += abs(prev_grid_pt[j]-grid_pt[j])
-                if diff < 3:
-                    continue  # neighbor is maximum. No need to evaluate
+            
             # check if it is local maxima in 1D->2D->3D->4D
-            for j in range(len(grid_buffers)):
+            for j in range(ndim):
                 tf, hts = self.is_local_maxima(grid_pt,
                                                grid_buffers[0:1+j] + zl[4-ndim+j],
                                                sign, ref_ht=temp_hts)
@@ -1874,6 +1904,11 @@ def auto_picking_3D_proj_method(in_filename, out_filename=None,
 
 
 if __name__ == "__main__":
+  if func != 'find_peaks':
     print_log('List of available functions:')
-    ut = ucsfTool()
+    ut=ucsfTool()
     ut.help()
+  else:
+    multiprocessing.freeze_support()
+    grid_peaks, _ = ut.find_peaks(noiselevel, grid_buffers=res, sign=sign, 
+                              verbose=verbose)
