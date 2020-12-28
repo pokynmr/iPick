@@ -482,6 +482,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     if confirmation == True:
         for spec in self.specs_peaks:
             for peak in spec:
+                try:
                     if peak.is_assigned == 1:
                     # we won't delete a peak that the user has assigned
                         continue
@@ -490,6 +491,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                     # index of 0 means this also won't delete a peak that the user has put notes on
                         peak.selected = 1
                         self.session.command_characters("")
+                except:
+                    continue
 
         tkMessageBox.showinfo(title='Done!', message='Peaks with zero corresponding peaks have been deleted')
 
