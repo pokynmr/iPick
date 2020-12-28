@@ -22,14 +22,17 @@ from sparky import sputil, tkutil
 from itertools import combinations
 import collections
 import math
-from time import sleep
 
 #from matplotlib import use as matplotlib_use
 #matplotlib_use('TkAgg')
 
-#import matplotlib.pyplot as plt
 from matplotlib.pyplot import subplots, subplots_adjust, ion, show, draw
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+try:
+    # for Mac support
+    from matplotlib.pyplot import pause
+except:
+    pass
 
 
 class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
@@ -526,7 +529,6 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.fig, self.axes = subplots(figsize=(20, 5), nrows=1, ncols=3)
     if sys.platform == 'darwin':
-        from matplotlib.pyplot import pause
         ion()
         show(block=False)
 
