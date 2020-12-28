@@ -114,5 +114,7 @@ The iPick paper is under review and more information will be posted here in futu
 
 National Science Foundation:
 
-* DBI 1902076 (Lee, W & Markley, J. L.)
-* DBI 2051595 (Lee, W & Markley, J. L.)
+* DBI 1902076 (Lee, W)
+* DBI 2051595 (Lee, W)
+
+University of Colorado Denver
