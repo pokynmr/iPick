@@ -539,7 +539,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
     if sys.platform == 'darwin':
-        sleep(0.001)
+        pause(0.001)
 
     self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
     self.axes[1].set_title ("N", fontsize=16)
