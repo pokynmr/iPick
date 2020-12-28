@@ -166,15 +166,15 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     bins_frm = tk.Frame(btmfrm)
     bins_frm.pack(side='top', fill='both', expand=1, pady=(0,10))
 
-    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=4, initial='0.1')
+    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=4, initial='0.02')
     self.bin_H.frame.pack(side='left', padx=(20,10))
     tkutil.create_hint(self.bin_H.frame, 'Bin steps for H histogram')
 
-    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='1')
+    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='0.02')
     self.bin_C.frame.pack(side='left', padx=(5,10))
     tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
 
-    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=4, initial='1')
+    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=4, initial='0.2')
     self.bin_N.frame.pack(side='left', padx=(5,10))
     tkutil.create_hint(self.bin_N.frame, 'Bin steps for N histogram')
 
@@ -526,8 +526,9 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.fig, self.axes = subplots(figsize=(20, 5), nrows=1, ncols=3)
     if sys.platform == 'darwin':
+        from matplotlib.pyplot import pause
         ion()
-        show()
+        show(block=False)
 
     self.fig.set_facecolor("white")
     subplots_adjust(left=0.04, bottom=0.1, right=0.98, top=0.90, wspace=0.14)
@@ -537,9 +538,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.axes[0].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #plt.pause(0.001)
-    # Sparky matplotlib doesn't have pause
-    sleep(0.001)
+    if sys.platform == 'darwin':
+        sleep(0.001)
 
     self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
     self.axes[1].set_title ("N", fontsize=16)
@@ -547,8 +547,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     #self.axes[1].set_ylabel("Counts", fontsize=12)
     self.axes[1].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #plt.pause(0.001)
-    sleep(0.001)
+    if sys.platform == 'darwin':
+        pause(0.001)
 
     self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin)
     self.axes[2].set_title ("C", fontsize=16)
@@ -556,8 +556,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     #self.axes[2].set_ylabel("Counts", fontsize=12)
     self.axes[2].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #plt.pause(0.001)
-    sleep(0.001)
+    if sys.platform == 'darwin':
+        pause(0.001)
 
     if sys.platform != 'darwin':
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
@@ -594,8 +594,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.canvas.draw()
     else:
         draw()
-        #plt.pause(0.001)
-        sleep(0.001)
+        if sys.platform == 'darwin':
+            pause(0.001)
 
 
 # ---------------------------------------------------------------------------
