@@ -15,10 +15,14 @@ if sys.version_info[0] == 2:
 else:
   import tkinter as tk
   import tkinter.messagebox as tkMessageBox
-  import tkinter.font as TkFont
+  import tkinter.font as tkFont
 
-import sparky
-from sparky import sputil, tkutil
+try:
+  import sparky
+  from sparky import sputil, tkutil
+except:
+  import poky
+  from poky import sputil, tkutil
 from itertools import combinations
 import collections
 import math
@@ -27,7 +31,11 @@ import math
 #matplotlib_use('TkAgg')
 
 from matplotlib.pyplot import subplots, subplots_adjust, ion, show, draw
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+try:
+    from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg as NavTB
+except:
+    from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavTB
 try:
     # for Mac support
     from matplotlib.pyplot import pause
@@ -569,7 +577,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        toolbar = NavigationToolbar2TkAgg(self.canvas, self.plot_frame)
+        toolbar = NavTB(self.canvas, self.plot_frame)
         toolbar.update()
 
 

@@ -21,11 +21,15 @@ if sys.version_info[0] == 2:
 else:
   import tkinter as tk
   import tkinter.messagebox as tkMessageBox
-  import tkinter.font as TkFont
+  import tkinter.font as tkFont
 
-import sparky
-from sparky import sputil, tkutil, pyutil
-
+try:
+  import sparky
+  from sparky import sputil, tkutil, pyutil
+except:
+  import poky
+  from poky import sputil, tkutil, pyutil
+  
 if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
     PYTHON_BIN = 'python'
     PYTHON_INSTALLED = True
