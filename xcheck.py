@@ -181,7 +181,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.bin_H.frame.pack(side='left', padx=(20,10))
     tkutil.create_hint(self.bin_H.frame, 'Bin steps for H histogram')
 
-    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='0.02')
+    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='0.2')
     self.bin_C.frame.pack(side='left', padx=(5,10))
     tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
 
@@ -464,7 +464,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                 lower_freq = round(this_freq-bin_step, round_digit)
 
                 for this_bin in [lower_freq, this_freq, upper_freq]:
-                    if this_hist.has_key(this_bin):
+                    if this_bin in this_hist:
                         this_hist[this_bin] = this_hist[this_bin] + 1
                     else:
                         this_hist[this_bin] = 1
