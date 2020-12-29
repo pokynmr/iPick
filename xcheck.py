@@ -27,8 +27,11 @@ from itertools import combinations
 import collections
 import math
 
-#from matplotlib import use as matplotlib_use
-#matplotlib_use('TkAgg')
+try:
+  from matplotlib import use as matplotlib_use
+  matplotlib_use('TkAgg')
+except:
+  pass
 
 from matplotlib.pyplot import subplots, subplots_adjust, ion, show, draw
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -36,11 +39,11 @@ try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg as NavTB
 except:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavTB
-try:
-    # for Mac support
-    from matplotlib.pyplot import pause
-except:
-    pass
+#try:
+#    # for Mac support
+#    from matplotlib.pyplot import pause
+#except:
+#    pass
 
 
 class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
@@ -539,9 +542,9 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     self.fig, self.axes = subplots(figsize=(20, 5), nrows=1, ncols=3)
-    if sys.platform == 'darwin':
-        ion()
-        show(block=False)
+    #if sys.platform == 'darwin':
+    #    ion()
+    #    show(block=False)
 
     self.fig.set_facecolor("white")
     subplots_adjust(left=0.04, bottom=0.1, right=0.98, top=0.90, wspace=0.14)
@@ -551,8 +554,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.axes[0].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    if sys.platform == 'darwin':
-        pause(0.001)
+    #if sys.platform == 'darwin':
+    #    pause(0.001)
 
     self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
     self.axes[1].set_title ("N", fontsize=16)
@@ -560,8 +563,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     #self.axes[1].set_ylabel("Counts", fontsize=12)
     self.axes[1].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    if sys.platform == 'darwin':
-        pause(0.001)
+    #if sys.platform == 'darwin':
+    #    pause(0.001)
 
     self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin)
     self.axes[2].set_title ("C", fontsize=16)
@@ -569,16 +572,16 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     #self.axes[2].set_ylabel("Counts", fontsize=12)
     self.axes[2].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    if sys.platform == 'darwin':
-        pause(0.001)
+    #if sys.platform == 'darwin':
+    #    pause(0.001)
 
-    if sys.platform != 'darwin':
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
-        self.canvas.get_tk_widget().pack()
-        self.canvas.draw()
+    #if sys.platform != 'darwin':
+    self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+    self.canvas.get_tk_widget().pack()
+    self.canvas.draw()
 
-        toolbar = NavTB(self.canvas, self.plot_frame)
-        toolbar.update()
+    toolbar = NavTB(self.canvas, self.plot_frame)
+    toolbar.update()
 
 
   def show_peak_in_hist(self, *args):
@@ -603,12 +606,12 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
         for peak in peaks:
             self.txt.append(this_axes.text(peak.frequency[n], 0, 'x', **text_style))
-    if sys.platform != 'darwin':
-        self.canvas.draw()
-    else:
-        draw()
-        if sys.platform == 'darwin':
-            pause(0.001)
+    #if sys.platform != 'darwin':
+    self.canvas.draw()
+    #else:
+    #    draw()
+    #    if sys.platform == 'darwin':
+    #        pause(0.001)
 
 
 # ---------------------------------------------------------------------------
