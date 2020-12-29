@@ -29,7 +29,7 @@ try:
 except:
   import poky
   from poky import sputil, tkutil, pyutil
-  
+
 if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
     PYTHON_BIN = 'python'
     PYTHON_INSTALLED = True
@@ -774,8 +774,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         CPUs = '1'
 
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
-            " -i " + UCSF_FILE +
-            " -o " + self.PEAKLIST_FILE +
+            " -i " + "\"" + UCSF_FILE + "\"" +
+            " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
             " -r " + self.resolution +
             " -c " + CPUs +
             " --sign " + self.pos_neg.get() +
@@ -785,8 +785,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if (self.nois_cont.get() == '1'):
         # using noise level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
-                " -i " + UCSF_FILE +
-                " -o " + self.PEAKLIST_FILE +
+                " -i " + "\"" + UCSF_FILE + "\"" +
+                " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
                 " -r " + self.resolution +
                 " -c " + CPUs +
                 " --sign " + self.pos_neg.get() +
@@ -797,8 +797,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     elif (self.nois_cont.get() == '2'):
         # using contour level
         cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
-               " -i " + UCSF_FILE +
-               " -o " + self.PEAKLIST_FILE +
+               " -i " + "\"" + UCSF_FILE + "\"" +
+               " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
                " -r " + self.resolution +
                " -c " + CPUs +
                " --sign " + self.pos_neg.get() +
@@ -1512,7 +1512,7 @@ class peak_list_field:
 
   def heading(self, dim):
     try:
-      getattr(self, 'title'):
+      getattr(self, 'title')
       return self.pad(self.title(dim), dim)
     except:
       return self.pad(self.name, dim)
