@@ -149,7 +149,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     self.b_tree = tkutil.scrolling_list(b_list_frm, 'Select a spectrum for pick peaking:', 5, True)
-    self.b_tree.listbox['selectmode'] = 'single'
+    self.b_tree.listbox['selectmode'] = 'extended'
     #self.b_tree.listbox['xscrollcommand'] = None
     self.b_tree.listbox.bind('<ButtonRelease-1>', self.spectra_selected)
     #self.b_tree.heading.config(font=('Courier', 5))
@@ -174,7 +174,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 
-    b_ipick_button = tk.Button(b_buttons_frm, text='Run iPick', width=18, command=self.run_ipick)
+    b_ipick_button = tk.Button(b_buttons_frm, text='Run iPick', width=18, command=self.run_ipick_multi)
     b_ipick_button.pack(side='left', pady=30)
     tkutil.create_hint(b_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
@@ -283,7 +283,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     nois_cont_label = tk.Label(a_nois_cont_frm, text="Use:")
     nois_cont_label.pack(side='left', fill='both')
     self.nois_cont = tk.StringVar()
-    self.nois_cont.set('1')
+    self.nois_cont.set('2')
 
     radio_cont = tk.Radiobutton(a_nois_cont_frm, text="Contour Level", highlightthickness = 0,
                                         variable=self.nois_cont, value='2', command=self.noise_or_contour)
@@ -667,8 +667,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             return
         idx = self.a_tree.selected_line_numbers()[0]
 
-    widget.config(text="Status: Spectrum selected. Check the contour level!")
+    widget.config(text="Status: Spectrum selected.")
     widget.update()
+
+    if len(data_list) > 1:
+        self.spectrum_list_selection = None
+    else:
+        self.spectrum_list_selection = idx
 
     if idx == None:
         tkMessageBox.showwarning(title='Error', message='The spectrum was not selected!')
@@ -687,8 +692,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.a_contour.variable.set('')
     self.a_noise.variable.set('')
-
-    self.spectrum_list_selection = idx
 
 
 # ---------------------------------------------------------------------------
@@ -730,9 +733,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     else:
         self.a_contour.variable.set(self.pos_contour)
+#TODO: this is only considering the pos peaks
 
 
-
+# ---------------------------------------------------------------------------
   def import_check(self, *args):
     if (self.basic_adv == 'basic'):
         if self.b_check_import.get() :
@@ -811,6 +815,27 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
     else:
         self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True, preexec_fn=os.setsid)
+
+
+# ---------------------------------------------------------------------------
+  def run_ipick_multi(self):
+    """ Running the iPick for multiple selections at once """
+    data_list = self.b_tree.selected_line_data()
+    if len(data_list) < 1:
+        tkMessageBox.showwarning(title='Error', message='No spectrum was selected!')
+        return
+
+    for spec_id in self.b_tree.selected_line_numbers():
+        self.spectrum = self.spec_list[spec_id]
+        views = self.session.project.view_list()
+        for v in views:
+            if v.name == self.spectrum.name:
+                v.got_focus()
+                self.pos_contour = v.positive_levels.lowest
+                self.neg_contour = v.negative_levels.lowest
+                break
+        self.contour_level()
+        self.run_ipick()
 
 
 # ---------------------------------------------------------------------------
@@ -980,7 +1005,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         status = self.b_status
     else:
         status = self.a_status
-    status.config(text="Status: Importing the peaks ...")
+    status.config(text="Status: Importing the peaks (0%)")
     status.update()
 
     try:
@@ -1054,6 +1079,9 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
             continue
 
         print('\nNew peak #' + str(i-1) + ' from ' + str(len(peaks)-2))
+        percent = "{:2.0f}".format(100 * (i-1) / len(peaks)-2)
+        status.config(text="Status: Importing the peaks (" + percent + "%)")
+        status.update()
 
         k = 1
         for exis_peak in spec_peaks:
