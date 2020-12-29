@@ -571,11 +571,13 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
       if self.spectrum == None:
         tkMessageBox.showwarning(title='Error', message='You need to select a spectrum first!')
         return
-
-      if not hasattr(self.session, 'spectrum_dialogs'):
+      try:
+        getattr(self.session, 'spectrum_dialogs')
+      except:
         self.session.spectrum_dialogs = {}
       dialogs = self.session.spectrum_dialogs
-      if (dialogs.has_key(self.spectrum) and not dialogs[self.spectrum].is_window_destroyed()):
+      if (self.spectrum in dialogs and \
+          not dialogs[self.spectrum].is_window_destroyed()):
         dialogs[self.spectrum].show_window(1)
       else:
         d = peak_list_dialog(self.session)
@@ -1177,20 +1179,20 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     progress_label.pack(side = 'top', anchor = 'w')
 
     br = tkutil.button_row(self.top,
-			   ('Update', self.update_cb),
-			   ('Setup...', self.setup_cb),
-			   ('Sort by height', self.sort_cb),
-			   ('Sort by Reliability Score', self.sort_rs),
-			   )
+               ('Update', self.update_cb),
+               ('Setup...', self.setup_cb),
+               ('Sort by height', self.sort_cb),
+               ('Sort by Reliability Score', self.sort_rs),
+               )
     br.frame.pack(side = 'top', anchor = 'w')
 
     rs_frame = tk.Frame(self.top)
     rs_frame.pack(anchor = 'w')
 
 #    br2 = tkutil.button_row(rs_frame,
-#			   ('Sort by height', self.sort_cb),
-#			   #('Remove peaks with Reliability Score of 0', self.remove_rs0),
-#			   )
+#               ('Sort by height', self.sort_cb),
+#               #('Remove peaks with Reliability Score of 0', self.remove_rs0),
+#               )
 #    br2.frame.pack(side = 'left', anchor = 'w')
 
     self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Reliability Score threshold for removing peaks:',
@@ -1208,12 +1210,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     cv_frame.pack(anchor = 'w')
 
     cv = tkutil.button_row(cv_frame,
-			   ('Cross-Validation Module', self.run_xcheck),
-			   ('Save...', self.peak_list.save_cb),
-			   ('Stop', self.stop_cb),
-			   ('Close', self.close_cb),
+               ('Cross-Validation Module', self.run_xcheck),
+               ('Save...', self.peak_list.save_cb),
+               ('Stop', self.stop_cb),
+               ('Close', self.close_cb),
                ('Help', sputil.help_cb(session, 'PeakListPython')),
-			   )
+               )
     cv.frame.pack(side = 'left', anchor = 'w')
 
     tkutil.create_hint(cv.buttons[0], 'Use the Cross-Validation tool for removing noise peaks')
@@ -1325,7 +1327,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     else:
       dimension = 0
     self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-				      self.heading(dimension))
+                      self.heading(dimension))
 
     self.peak_list.clear()
     self.stoppable_loop('peaks', 50)
@@ -1348,7 +1350,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     else:
       dimension = 0
     self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-				      self.heading(dimension))
+                      self.heading(dimension))
 
 
     # sort by intensity
@@ -1389,7 +1391,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     else:
       dimension = 0
     self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-				      self.heading(dimension))
+                      self.heading(dimension))
 
 
     # sort by reliability score
@@ -1451,7 +1453,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     for field in self.settings.fields:
       if field.onoff:
-	field.initialize(self.session, peaks, self)
+        field.initialize(self.session, peaks, self)
 
   # ---------------------------------------------------------------------------
   #
@@ -1460,7 +1462,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     line = str(rank + 1)  #default is ''
     for field in self.settings.fields:
       if field.onoff:
-	    line = line + field.string(peak)
+        line = line + field.string(peak)
     return line
 
   # ---------------------------------------------------------------------------
@@ -1470,7 +1472,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     heading = ''
     for field in self.settings.fields:
       if field.onoff:
-	    heading = heading + field.heading(dim)
+        heading = heading + field.heading(dim)
     return heading
 
 # -----------------------------------------------------------------------------
@@ -1495,7 +1497,7 @@ class peak_list_settings:
       ftable[f.name] = f
 
     for name in field_names:
-      if ftable.has_key(name):
+      if name in ftable:
         ftable[name].onoff = 1
 
 # -----------------------------------------------------------------------------
@@ -1505,9 +1507,11 @@ class peak_list_field:
     self.onoff = 0
 
   def heading(self, dim):
-    if hasattr(self, 'title'):
+    try:
+      getattr(self, 'title'):
       return self.pad(self.title(dim), dim)
-    return self.pad(self.name, dim)
+    except:
+      return self.pad(self.name, dim)
 
   def initialize(self, session, peaks, stoppable):
     pass
@@ -1739,10 +1743,10 @@ class peak_list_settings_dialog(tkutil.Settings_Dialog):
 
 
     br = tkutil.button_row(self.top,
-                          ('Ok', self.ok_cb),
-		            	  ('Apply', self.apply_cb),
-			              ('Close', self.close_cb),
-			              )
+                      ('Ok', self.ok_cb),
+                      ('Apply', self.apply_cb),
+                      ('Close', self.close_cb),
+                      )
     br.frame.pack(side = 'top', anchor = 'w')
 
 
