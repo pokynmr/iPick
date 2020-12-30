@@ -589,6 +589,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         d.settings.show_fields('Assignment', 'Chemical Shift', 'Reliability Score')
         d.show_spectrum_peaks(self.spectrum)
         dialogs[self.spectrum] = d
+        d.sort_reliability()
 
 
 # ---------------------------------------------------------------------------
@@ -876,22 +877,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     try:
 
-        experiment_file = os.path.split(UCSF_FILE)[1]
-        experiment_name = os.path.splitext(experiment_file)[0]
-        peak_list = experiment_name + '.list'
-
-        self.PEAKLIST_FILE = os.path.join(tempfile.gettempdir(), peak_list)
-
-        # try putting the peak list file in the Lists folder
-        try:
-            Spectra_folder = os.path.split(UCSF_FILE)[0]
-            project_folder = os.path.split(Spectra_folder)[0]
-            Lists_folder = os.path.join(project_folder, 'Lists')
-            if os.path.exists(Lists_folder) and os.access(Lists_folder, os.W_OK | os.X_OK):
-                self.PEAKLIST_FILE = os.path.join(Lists_folder, peak_list)
-        except:
-            pass
-
+        self.find_peaklist_file()
 
         if os.path.exists(self.PEAKLIST_FILE):
             os.remove(self.PEAKLIST_FILE)
@@ -1000,6 +986,29 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
 # ---------------------------------------------------------------------------
+  def find_peaklist_file(self):
+  
+    UCSF_FILE = self.spectrum.data_path
+
+    experiment_file = os.path.split(UCSF_FILE)[1]
+    experiment_name = os.path.splitext(experiment_file)[0]
+    peak_list = experiment_name + '.list'
+
+    self.PEAKLIST_FILE = os.path.join(tempfile.gettempdir(), peak_list)
+
+    # try putting the peak list file in the Lists folder
+    try:
+        Spectra_folder = os.path.split(UCSF_FILE)[0]
+        project_folder = os.path.split(Spectra_folder)[0]
+        Lists_folder = os.path.join(project_folder, 'Lists')
+        if os.path.exists(Lists_folder) and os.access(Lists_folder, os.W_OK | os.X_OK):
+            self.PEAKLIST_FILE = os.path.join(Lists_folder, peak_list)
+
+    except:
+        pass
+
+
+# ---------------------------------------------------------------------------
   def place_peaks(self):
     if (self.basic_adv == 'basic'):
         status = self.b_status
@@ -1008,6 +1017,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.config(text="Status: Importing the peaks (0%)")
     status.update()
 
+    self.find_peaklist_file()
+    
     try:
         print("Importing the peaks from: " + self.PEAKLIST_FILE)
     except:

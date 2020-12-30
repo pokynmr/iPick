@@ -311,19 +311,38 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     # list(combinations(range(3), 2))  -- >  [(0, 1), (0, 2), (1, 2)]
     # 8 spec is 28 combinations!
 
-
     if num_of_specs == 1:
         tkMessageBox.showwarning(title='Error!', message='You need to select at least two experiments to validate against each other')
         return
-
-
+    
     for spec in self.specs_peaks:
         for peak in spec:
             if self.note_append.get():
-                peak.note += ';xcheck:'
+                # if the user is re-running xcheck, remove the previous results
+                if len(peak.note) == 0:
+                    peak.note = 'xcheck:'
+                else:
+                    xcheck_str_start = peak.note.find('xcheck:')
+                    if xcheck_str_start == 0:
+                        peak.note = 'xcheck:'
+                    elif xcheck_str_start > 0:   
+                        peak.note = peak.note[ : xcheck_str_start] + 'xcheck:'
+                    else:
+                        peak.note += ';xcheck:'
             else:
                 peak.note = 'xcheck:'
 
+
+    total_peaks = 0
+    for spec_pair in combinations_list:
+        s1 = spec_pair[0]
+        s2 = spec_pair[1]
+        if (self.specs_nuclei[s1][0] != self.specs_nuclei[s2][0]):
+            continue
+        total_peaks += len(self.specs_peaks[s1]) * len(self.specs_peaks[s2])
+            
+            
+    processed_peaks = 0
     for spec_pair in combinations_list:
         self.top.update()
 
@@ -363,7 +382,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
             match_flag = 0
             for j, peak2 in enumerate(self.specs_peaks[s2]):
-
+            
                 #print 'Peak2 ' + str(j) + ': '
                 #print(peak2.frequency)
 
@@ -388,6 +407,13 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
             if match_flag == 0:
                 print('\n' + '*' * 20 + '\nNo match:')
                 print(peak1.frequency)
+                
+                
+            processed_peaks += len(self.specs_peaks[s2]) 
+            percent = "{:2.0f}".format(100 * processed_peaks / total_peaks)
+            self.status.config(text="Status: Running ... (" + percent + "%)")
+            self.status.update()
+            
 
         print('_' * 50)
 
@@ -399,7 +425,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
                 main_note = ''
                 if xcheck_str_start > 0:
-                    main_note = peak.note[ : xcheck_str_start] + ';'
+                    main_note = peak.note[ : xcheck_str_start]
 
                 xcheck = peak.note[xcheck_str_start + len('xcheck:') : ].strip(',')
                 if xcheck == '':
