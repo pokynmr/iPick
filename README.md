@@ -151,7 +151,7 @@ _______________________________________________________
 ## Acknowledgments
 
 #### Citation
-The iPick paper is under review and more information will be posted here in future.
+The iPick paper information will be posted here in future.
 
 
 #### Contributions
