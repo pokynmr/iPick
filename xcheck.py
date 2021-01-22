@@ -19,13 +19,16 @@ else:
 
 try:
   import sparky
-  from sparky import sputil, tkutil
+  from sparky import sputil, tkutil, pyutil
 except:
   import poky
-  from poky import sputil, tkutil
+  from poky import sputil, tkutil, pyutil
+  
+import peak_list_dialog
 from itertools import combinations
 import collections
 import math
+from decimal import Decimal, getcontext
 
 try:
   from matplotlib import use as matplotlib_use
@@ -77,11 +80,11 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # run buttons 1st row
     buttonsfrm1 = tk.Frame(self.top)
-    buttonsfrm1.pack(fill='both', expand=1, padx=8, pady=(10,2))
+    buttonsfrm1.pack(fill='both', expand=1, padx=(15,0), pady=(10,2))
 
     # run buttons 2nd row
     buttonsfrm2 = tk.Frame(self.top)
-    buttonsfrm2.pack(fill='both', expand=1, padx=8)
+    buttonsfrm2.pack(fill='both', expand=1, padx=(15,0))
 
     # status
     statusfrm = tk.Frame(self.top)
@@ -121,13 +124,13 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.tol_H.frame.pack(side='left', padx=(20,10))
     tkutil.create_hint(self.tol_H.frame, 'Maximum distance for H to be considered the same resonance')
 
-    self.tol_C = tkutil.entry_field(tol_frm, '13C:', width=5, initial='0.35')
-    self.tol_C.frame.pack(side='left', padx=(5,10))
-    tkutil.create_hint(self.tol_C.frame, 'Maximum distance for C to be considered the same resonance')
-
     self.tol_N = tkutil.entry_field(tol_frm, '15N:', width=5, initial='0.3')
     self.tol_N.frame.pack(side='left', padx=(5,10))
     tkutil.create_hint(self.tol_N.frame, 'Maximum distance for N to be considered the same resonance')
+
+    self.tol_C = tkutil.entry_field(tol_frm, '13C:', width=5, initial='0.35')
+    self.tol_C.frame.pack(side='left', padx=(5,10))
+    tkutil.create_hint(self.tol_C.frame, 'Maximum distance for C to be considered the same resonance')
 
 
 # exclude frame
@@ -180,32 +183,36 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     bins_frm = tk.Frame(btmfrm)
     bins_frm.pack(side='top', fill='both', expand=1, pady=(0,10))
 
-    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=4, initial='0.02')
-    self.bin_H.frame.pack(side='left', padx=(20,10))
+    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=5, initial='0.1')
+    self.bin_H.frame.pack(side='left', padx=(18,10))
     tkutil.create_hint(self.bin_H.frame, 'Bin steps for H histogram')
 
-    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=4, initial='0.2')
-    self.bin_C.frame.pack(side='left', padx=(5,10))
-    tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
-
-    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=4, initial='0.2')
-    self.bin_N.frame.pack(side='left', padx=(5,10))
+    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=5, initial='1')
+    self.bin_N.frame.pack(side='left', padx=(3,10))
     tkutil.create_hint(self.bin_N.frame, 'Bin steps for N histogram')
+    
+    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=5, initial='1')
+    self.bin_C.frame.pack(side='left', padx=(3,10))
+    tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
 
 
 # run button & status
 
     xcheck_button = tk.Button(buttonsfrm1, text='Run Cross-Validation', command=self.run_xcheck_button)
-    xcheck_button.pack(side='left', padx=1)
+    xcheck_button.pack(side='left')
     tkutil.create_hint(xcheck_button, 'Runs the cross validation using the settings above')
 
-    hist_button = tk.Button(buttonsfrm1, text='Peak Histogram',  command=self.run_histogram)
+
+    peaklist_button = tk.Button(buttonsfrm1, text='Peak List', width=10, command=self.show_peak_list)
+    peaklist_button.pack(side='left')
+    tkutil.create_hint(peaklist_button, 'Shows the Peak list')
+    
+    
+    hist_button = tk.Button(buttonsfrm2, text='Peak Histogram', width=16,  command=self.run_histogram)
     hist_button.pack(side='left')
     tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances. The above settings do NOT effect this')
 
-    delete_button = tk.Button(buttonsfrm2, text='Remove Lone Peaks', command=self.remove_peaks)
-    delete_button.pack(side='left', padx=1)
-    tkutil.create_hint(delete_button, 'Removes the peaks that have no corresponding peaks in other experiments. You need to run the cross validation first.')
+
 
     stop_button = tk.Button(buttonsfrm2, text='Stop', command=self.stop_cb)
     stop_button.pack(side='left')
@@ -220,7 +227,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.status.pack(side='left', anchor='w', pady=(10,5), padx=(5,0))
 
     progress_label = tk.Label(statusfrm)
-    progress_label.pack(side = 'left', anchor = 'w')
+    progress_label.pack(side='left', anchor='w')
 
     tkutil.Stoppable.__init__(self, progress_label, stop_button)
 
@@ -289,7 +296,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.specs_peaks.append(self.spec_list[spec_id].peak_list())
         self.specs_nuclei.append(self.spec_list[spec_id].nuclei)
         self.specs_names.append(self.spec_list[spec_id].name)
-
+    
 
 # ---------------------------------------------------------------------------
   def run_xcheck_button(self):
@@ -435,8 +442,12 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                     xcheck_array = xcheck.split(',')
                     new_note = main_note + 'xcheck:'
 
+                    this_peak_total = 0
+                    this_peak_details = ''
                     for (exp, freq) in collections.Counter(xcheck_array).items():
-                            new_note += exp + ':' + str(freq) + ','
+                        this_peak_total += freq
+                        this_peak_details += exp + ':' + str(freq) + ','
+                    new_note += 'Total:' + str(this_peak_total) + ',' + this_peak_details
 
                 peak.note = new_note.strip(',')
 
@@ -505,9 +516,21 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     d = hist_dialog(self.session)
     d.show_window(1)
     d.show_histograms(H_hist, N_hist, C_hist,
-                        float(self.bin_H.variable.get()),
-                        float(self.bin_N.variable.get()),
-                        float(self.bin_C.variable.get()))
+                        self.find_bin_width(H_hist),
+                        self.find_bin_width(N_hist),
+                        self.find_bin_width(C_hist))
+
+
+# ---------------------------------------------------------------------------
+  def find_bin_width(self, hist):
+    hist_list = sorted(hist.keys())
+    getcontext().prec = 5
+    diff = 9999
+    for i in range(len(hist_list)-1):
+        this_diff = abs(float(Decimal(hist_list[i]) - Decimal(hist_list[i+1])))
+        if this_diff < diff:
+            diff = this_diff
+    return diff
 
 
 # ---------------------------------------------------------------------------
@@ -534,9 +557,22 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         tkMessageBox.showinfo(title='Done!', message='Peaks with zero corresponding peaks have been deleted')
 
 
+# ---------------------------------------------------------------------------
+  def show_peak_list(self, *args):
+    if self.session.project == None:
+        tkMessageBox.showwarning(title='Error', message='No spectrum is loaded!')
+        return
 
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
+    d = peak_list_dialog.peak_list_dialog(self.session)
+    d.show_window(1)
+    d.settings.show_fields('Assignment', 'Chemical Shift', 'Note')
+    d.show_spectrum_peaks(self.spec_list[0])
+    #d.sort_reliability()
+
+
+
+
+#####################################################################################
 
 class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
@@ -545,8 +581,8 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.session = session
     tkutil.Dialog.__init__(self, session.tk, 'Peak Histograms')
 
-    #progress_label = tk.Label(self.top, anchor = 'nw', text="Output progress:")
-    #progress_label.pack(side = 'top', anchor = 'w')
+    #progress_label = tk.Label(self.top, anchor='nw', text="Output progress:")
+    #progress_label.pack(side='top', anchor='w')
 
     self.plot_frame = tk.Frame(self.top)
     self.plot_frame.pack(side='top', fill='both', expand=1, padx=4, pady=(3,0))

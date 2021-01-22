@@ -30,6 +30,9 @@ except:
   import poky
   from poky import sputil, tkutil, pyutil
 
+import peak_list_dialog
+import xcheck
+
 if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
     PYTHON_BIN = 'python'
     PYTHON_INSTALLED = True
@@ -116,11 +119,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     radio_label.pack(side='left', fill='both')
     self.basic_advanced = tk.StringVar()
     self.basic_advanced.set('1')
-    radio_button1 = tk.Radiobutton(radio_frame, text="Basic ", highlightthickness = 0,
+    radio_button1 = tk.Radiobutton(radio_frame, text="Basic ", highlightthickness=0,
                                         variable=self.basic_advanced, value='1', command=self.basic_frame_show)
     radio_button1.pack(side='left')
 
-    radio_button2 = tk.Radiobutton(radio_frame, text="Advanced", highlightthickness = 0,
+    radio_button2 = tk.Radiobutton(radio_frame, text="Advanced", highlightthickness=0,
                                         variable=self.basic_advanced, value='2', command=self.adv_frame_show)
     radio_button2.pack(side='left')
 
@@ -139,9 +142,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     b_import_frm = tk.Frame(self.basic_frame)
     b_import_frm.pack(side='top', fill='both', expand=1)
 
-    # noise button & noise
-    b_buttons_frm = tk.Frame(self.basic_frame)
-    b_buttons_frm.pack(fill='both', expand=1, padx=8)
+    # buttons
+    b_buttons_frm1 = tk.Frame(self.basic_frame)
+    b_buttons_frm1.pack(fill='both', expand=1, padx=(20,0), pady=(30,2))
+    
+    b_buttons_frm2 = tk.Frame(self.basic_frame)
+    b_buttons_frm2.pack(fill='both', expand=1, padx=(20,0), pady=(0,30))
 
     # output
     b_btmfrm = tk.Frame(self.basic_frame)
@@ -158,7 +164,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     b_import_label = tk.Label(b_import_frm, text="Import peaks:")
-    b_import_label.pack(side='left')
+    b_import_label.pack(side='left', padx=8)
 
     self.b_check_import = tk.BooleanVar()
     self.b_check_import.set(True)
@@ -172,33 +178,34 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(self.b_import_button, 'You can use the manual import after the peak picking is done')
 
 
-
-
-    b_ipick_button = tk.Button(b_buttons_frm, text='Run iPick', width=18, command=self.run_ipick_multi)
-    b_ipick_button.pack(side='left', pady=30)
+    b_ipick_button = tk.Button(b_buttons_frm1, text='Run iPick', width=22, command=self.run_ipick_multi)
+    b_ipick_button.pack(side='left')
     tkutil.create_hint(b_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
+    update_button = tk.Button(b_buttons_frm1, text='Update List', width=10, command=self.update_tree)
+    update_button.pack(side='left', anchor='w', expand=0)
 
-    #update_button = tk.Button(b_buttons_frm, text='Update List', command=self.update_tree)
-    #update_button.pack(side='left', anchor='w', expand=0)
-
-
-    b_ipick_button = tk.Button(b_buttons_frm, text='Peak list', command=self.show_peak_list)
-    b_ipick_button.pack(side='left')
-    tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
-
-    self.b_stop_button = tk.Button(b_buttons_frm, text='Stop', command=self.stop_button)
+    self.b_stop_button = tk.Button(b_buttons_frm1, text='Stop', command=self.stop_button)
     self.b_stop_button.pack(side='left')
     tkutil.create_hint(self.b_stop_button, 'Stops any processing')
 
+   
+    b_xcheck_button = tk.Button(b_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
+    b_xcheck_button.pack(side='left')
+    tkutil.create_hint(b_xcheck_button, 'Use the Cross-Validation tool for removing noise peaks')
+
+    b_ipick_button = tk.Button(b_buttons_frm2, text='Peak List', width=10, command=self.show_peak_list)
+    b_ipick_button.pack(side='left')
+    tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
+
 
 #TODO: Add the section for iPick to the extensions.html file
-    help_button = tk.Button(b_buttons_frm, text='Help', command=sputil.help_cb(session, 'iPick'))
+    help_button = tk.Button(b_buttons_frm2, text='Help', command=sputil.help_cb(session, 'iPick'))
     help_button.pack(side='left')
     tkutil.create_hint(help_button, 'Opens a help page with more information about this module.')
 
-    b_progress_label = tk.Label(b_buttons_frm)
-    b_progress_label.pack(side = 'left', anchor = 'w')
+    b_progress_label = tk.Label(b_buttons_frm2)
+    b_progress_label.pack(side='left', anchor='w')
 
     tkutil.Stoppable.__init__(self, b_progress_label, self.b_stop_button)
 
@@ -285,11 +292,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.nois_cont = tk.StringVar()
     self.nois_cont.set('2')
 
-    radio_cont = tk.Radiobutton(a_nois_cont_frm, text="Contour Level", highlightthickness = 0,
+    radio_cont = tk.Radiobutton(a_nois_cont_frm, text="Contour Level", highlightthickness=0,
                                         variable=self.nois_cont, value='2', command=self.noise_or_contour)
     radio_cont.pack(side='left')
 
-    radio_nois = tk.Radiobutton(a_nois_cont_frm, text="Noise Level", highlightthickness = 0,
+    radio_nois = tk.Radiobutton(a_nois_cont_frm, text="Noise Level", highlightthickness=0,
                                         variable=self.nois_cont, value='1', command=self.noise_or_contour)
     radio_nois.pack(side='left')
 
@@ -331,14 +338,14 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.pos_neg = tk.StringVar()
     self.pos_neg.set('0')
 
-    radio_pos = tk.Radiobutton(a_pos_neg_frm, text="Positive peaks", highlightthickness = 0,
+    radio_pos = tk.Radiobutton(a_pos_neg_frm, text="Positive peaks", highlightthickness=0,
                                         variable=self.pos_neg, value='1')
     radio_pos.pack(side='left')
 
-    radio_neg = tk.Radiobutton(a_pos_neg_frm, text="Negative peaks", highlightthickness = 0,
+    radio_neg = tk.Radiobutton(a_pos_neg_frm, text="Negative peaks", highlightthickness=0,
                                         variable=self.pos_neg, value='-1')
     radio_neg.pack(side='left')
-    radio_both = tk.Radiobutton(a_pos_neg_frm, text="Both", highlightthickness = 0,
+    radio_both = tk.Radiobutton(a_pos_neg_frm, text="Both", highlightthickness=0,
                                         variable=self.pos_neg, value='0')
     radio_both.pack(side='left')
     radio_both.select()
@@ -417,12 +424,12 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     integration_radio_label.pack(side='left', fill='both')
     self.integration_radio = tk.StringVar()
     self.integration_radio.set('1')
-    integration_radio_button1 = tk.Radiobutton(self.a_integration_radio_frm, text="Individual fit", highlightthickness = 0,
+    integration_radio_button1 = tk.Radiobutton(self.a_integration_radio_frm, text="Individual fit", highlightthickness=0,
                                         variable=self.integration_radio, value='1')
     integration_radio_button1.pack(side='left')
     tkutil.create_hint(integration_radio_button1, 'Each peak will be fitted individually not considering the neighbor peaks')
 
-    integration_radio_button2 = tk.Radiobutton(self.a_integration_radio_frm, text="Group fit", highlightthickness = 0,
+    integration_radio_button2 = tk.Radiobutton(self.a_integration_radio_frm, text="Group fit", highlightthickness=0,
                                         variable=self.integration_radio, value='2', command=self.groupfit_selected)
     integration_radio_button2.pack(side='left')
     tkutil.create_hint(integration_radio_button2, 'Peaks will be fitted as a group by considering the neighbor peaks')
@@ -434,36 +441,43 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     # separator
     #sep = tk.Frame(a_btmfrm, height=2, bd=1, relief="ridge")
-    #sep.pack(fill="both", padx=5, pady=(5,12), side = 'top')
+    #sep.pack(fill="both", padx=5, pady=(5,12), side='top')
 
 
-    # buttons frame
-    a_buttons_frm = tk.Frame(a_btmfrm)
-    a_buttons_frm.pack(side='top', fill='both', expand=1, pady=(10,8))
+    # buttons frames
+    a_buttons_frm1 = tk.Frame(a_btmfrm)
+    a_buttons_frm1.pack(fill='both', expand=1, padx=(15,0), pady=(10,2))
 
+    a_buttons_frm2 = tk.Frame(a_btmfrm)
+    a_buttons_frm2.pack(fill='both', expand=1, padx=(15,0), pady=(0,10))
+    
 
-    a_ipick_button = tk.Button(a_buttons_frm, text='Run iPick', width=18, command=self.run_ipick)
+    a_ipick_button = tk.Button(a_buttons_frm1, text='Run iPick', width=22, command=self.run_ipick)
     a_ipick_button.pack(side='left')
     tkutil.create_hint(a_ipick_button, 'Runs the peak picking algorithm. May take a few minutes to complete')
 
+    a_update_button = tk.Button(a_buttons_frm1, text='Update List', width=10, command=self.update_tree)
+    a_update_button.pack(side='left', anchor='w', expand=0)
 
-    #a_update_button = tk.Button(a_buttons_frm, text='Update List', command=self.update_tree)
-    #a_update_button.pack(side='left', anchor='w', expand=0)
+    self.a_stop_button = tk.Button(a_buttons_frm1, text='Stop', command=self.stop_button)
+    self.a_stop_button.pack(side='left')
+    tkutil.create_hint(self.a_stop_button, 'Stops any processing')
+    
 
+    a_xcheck_button = tk.Button(a_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
+    a_xcheck_button.pack(side='left')
+    tkutil.create_hint(a_xcheck_button, 'Use the Cross-Validation tool for removing noise peaks')
 
-    a_ipick_button = tk.Button(a_buttons_frm, text='Peak list', command=self.show_peak_list)
+    a_ipick_button = tk.Button(a_buttons_frm2, text='Peak List', width=10, command=self.show_peak_list)
     a_ipick_button.pack(side='left')
     tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
 
-    self.a_stop_button = tk.Button(a_buttons_frm, text='Stop', command=self.stop_button)
-    self.a_stop_button.pack(side='left')
-    tkutil.create_hint(self.a_stop_button, 'Stops any processing')
 
-    a_help_button = tk.Button(a_buttons_frm, text='Help', command=sputil.help_cb(session, 'iPick'))
+    a_help_button = tk.Button(a_buttons_frm2, text='Help', command=sputil.help_cb(session, 'iPick'))
     a_help_button.pack(side='left')
     tkutil.create_hint(a_help_button, 'Opens a help page with more information about this module.')
 
-    a_progress_label = tk.Label(a_buttons_frm)
+    a_progress_label = tk.Label(a_buttons_frm2)
     a_progress_label.pack(side='left', anchor='w')
 
     tkutil.Stoppable.__init__(self, a_progress_label, self.a_stop_button)
@@ -584,12 +598,19 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
           not dialogs[self.spectrum].is_window_destroyed()):
         dialogs[self.spectrum].show_window(1)
       else:
-        d = peak_list_dialog(self.session)
+        d = peak_list_dialog.peak_list_dialog(self.session)
         d.show_window(1)
         d.settings.show_fields('Assignment', 'Chemical Shift', 'Reliability Score')
         d.show_spectrum_peaks(self.spectrum)
         dialogs[self.spectrum] = d
         d.sort_reliability()
+   
+
+# ---------------------------------------------------------------------------
+  #
+  def run_xcheck(self, *args):
+
+    xcheck.show_xcheck_dialog(self.session)
 
 
 # ---------------------------------------------------------------------------
@@ -810,7 +831,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                " --threshold " + self.a_contour.variable.get() +
                " --overwrite")
 
-    print cmd
+    print(cmd)
 
     if OS_WINDOWS:
         self.proc = subprocess.Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
@@ -1160,6 +1181,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.last_PEAKLIST_FILE = self.PEAKLIST_FILE
 
 
+
 #####################################################################################
 
 class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
@@ -1192,645 +1214,6 @@ class groupfit_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     close_button = tk.Button(main_frame, text='Close', command=self.close_cb)
     close_button.pack(side='top', pady=(5,10))
-
-
-
-#####################################################################################
-
-
-class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
-
-  def __init__(self, session):
-
-    self.session = session
-    self.title = 'Peak List'
-    self.spectrum = None
-    self.peaks = ()
-    self.settings = peak_list_settings()
-
-    tkutil.Dialog.__init__(self, session.tk, self.title)
-
-    self.pl = sputil.peak_listbox(self.top)
-    self.pl.frame.pack(side = 'top', fill = 'both', expand = 1)
-    self.pl.listbox['selectmode'] = 'extended'
-    self.pl.listbox.bind('<ButtonRelease-1>', self.peak_selected)
-    self.pl.listbox.bind('<ButtonRelease-2>', self.pl.goto_peak_cb)
-    self.pl.listbox.bind('<Double-ButtonRelease-1>', self.pl.goto_peak_cb)
-    self.peak_list = self.pl
-
-    progress_label = tk.Label(self.top, anchor = 'nw')
-    progress_label.pack(side = 'top', anchor = 'w')
-
-    br = tkutil.button_row(self.top,
-               ('Update', self.update_cb),
-               ('Setup...', self.setup_cb),
-               ('Sort by height', self.sort_cb),
-               ('Sort by Reliability Score', self.sort_rs),
-               )
-    br.frame.pack(side = 'top', anchor = 'w')
-
-    rs_frame = tk.Frame(self.top)
-    rs_frame.pack(anchor = 'w')
-
-#    br2 = tkutil.button_row(rs_frame,
-#               ('Sort by height', self.sort_cb),
-#               #('Remove peaks with Reliability Score of 0', self.remove_rs0),
-#               )
-#    br2.frame.pack(side = 'left', anchor = 'w')
-
-    self.remove_rs0_thresh = tkutil.entry_field(rs_frame, 'Reliability Score threshold for removing peaks:',
-                                                width=12, initial='100.0')
-    self.remove_rs0_thresh.frame.pack(side='left', padx=(5,5))
-    tkutil.create_hint(self.remove_rs0_thresh.frame,
-                       'Remove peaks with "ABSOLUTE Reliability Score" at and below this threshold')
-
-    remove_rs0_button = tk.Button(rs_frame, text='Remove', command=self.remove_rs0)
-    remove_rs0_button.pack(side='left')
-    tkutil.create_hint(remove_rs0_button,
-                       'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
-
-    cv_frame = tk.Frame(self.top)
-    cv_frame.pack(anchor = 'w')
-
-    cv = tkutil.button_row(cv_frame,
-               ('Cross-Validation Module', self.run_xcheck),
-               ('Save...', self.peak_list.save_cb),
-               ('Stop', self.stop_cb),
-               ('Close', self.close_cb),
-               ('Help', sputil.help_cb(session, 'PeakListPython')),
-               )
-    cv.frame.pack(side = 'left', anchor = 'w')
-
-    tkutil.create_hint(cv.buttons[0], 'Use the Cross-Validation tool for removing noise peaks')
-    tkutil.create_hint(cv.buttons[1], 'Save the Peak List data as being shown')
-
-    keypress_cb = pyutil.precompose(sputil.command_keypress_cb, session)
-    self.pl.listbox.bind('<KeyPress>', keypress_cb)
-
-    tkutil.Stoppable.__init__(self, progress_label, cv.buttons[2])
-    self.sort_reliability()
-
-  # ---------------------------------------------------------------------------
-  #
-  def run_xcheck(self, *args):
-
-    try:
-        import xcheck
-        xcheck.show_xcheck_dialog(self.session)
-
-    except:
-        tkMessageBox.showwarning(title='Error', message='Could not find the Cross Validation module!')
-
-  # ---------------------------------------------------------------------------
-  #
-  def peak_selected(self, *args):
-    self.pl.select_peak_cb(*args)
-
-    peaks = self.session.selected_peaks()
-    RS = reliability_score(peaks[-1])
-    self.remove_rs0_thresh.variable.set('%7.2f' % RS)
-
-  # ---------------------------------------------------------------------------
-  #
-  def show_peaks(self, peaks, title):
-
-    self.title = title
-    self.top.title(self.title)
-    self.spectrum = None
-    self.peaks = peaks
-    self.stoppable_call(self.update_peaks)
-
-  # ---------------------------------------------------------------------------
-  #
-  def show_spectrum_peaks(self, spectrum):
-
-    self.title = spectrum.name + ' peak list'
-    self.top.title(self.title)
-    self.spectrum = spectrum
-    self.peaks = None
-    self.stoppable_call(self.update_peaks)
-
-  # ---------------------------------------------------------------------------
-  #
-  def update_cb(self):
-
-    self.stoppable_call(self.update_peaks)
-
-  # ---------------------------------------------------------------------------
-  #
-  def sort_cb(self):
-
-    self.stoppable_call(self.sort_peaks)
-
-  # ---------------------------------------------------------------------------
-  #
-  def sort_rs(self):
-
-    self.stoppable_call(self.sort_reliability)
-
-  # ---------------------------------------------------------------------------
-  #
-  def remove_rs0(self):
-
-    self.stoppable_call(self.remove_peaks_rs0)
-
-  # ---------------------------------------------------------------------------
-  #
-  def setup_cb(self):
-
-    psd = sputil.the_dialog(peak_list_settings_dialog, self.session)
-    psd.set_parent_dialog(self, self.settings, self.new_settings)
-    psd.top.title(self.title + ' settings')
-    psd.show_window(1)
-
-  # ---------------------------------------------------------------------------
-  #
-  def new_settings(self, settings):
-
-    self.settings = settings
-    self.stoppable_call(self.update_peaks)
-
-  # ---------------------------------------------------------------------------
-  #
-  def update_peaks(self):
-
-    self.progress_report('Getting peaks')
-    if self.spectrum:
-      peaks = self.spectrum.peak_list()
-    else:
-      peaks = self.peaks
-
-    if self.settings.sort_by_assignment:
-      peaks = sputil.sort_peaks_by_assignment(peaks, self)
-
-    self.field_initializations(peaks)
-
-    if peaks:
-      dimension = peaks[0].spectrum.dimension
-    else:
-      dimension = 0
-    self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-                      self.heading(dimension))
-
-    self.peak_list.clear()
-    self.stoppable_loop('peaks', 50)
-    for rank, peak in enumerate(peaks):
-      self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak, rank), peak)
-
-  # ---------------------------------------------------------------------------
-  #
-  def sort_peaks(self):
-
-    self.progress_report('Sorting peaks')
-    if self.spectrum:
-      peaks = self.spectrum.peak_list()
-    else:
-      peaks = self.peaks
-
-    if peaks:
-      dimension = peaks[0].spectrum.dimension
-    else:
-      dimension = 0
-    self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-                      self.heading(dimension))
-
-
-    # sort by intensity
-    data = []
-    for peak in peaks:
-      data.append((peak.data_height, peak))
-
-    peaks = []
-    # sort by x_pos
-    data = sorted(data, key=lambda data: data[0], reverse=True)
-
-    for (height, peak) in data:
-      peaks.append(peak)
-
-    self.field_initializations(peaks)
-
-    self.peak_list.clear()
-
-    self.stoppable_loop('peaks', 50)
-    for rank, peak in enumerate(peaks):
-      self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak, rank), peak)
-
-  # ---------------------------------------------------------------------------
-  #
-  def sort_reliability(self):
-
-    self.update_peaks()
-
-    self.progress_report('Sorting peaks by reliability')
-    if self.spectrum:
-      peaks = self.spectrum.peak_list()
-    else:
-      peaks = self.peaks
-
-    if peaks:
-      dimension = peaks[0].spectrum.dimension
-    else:
-      dimension = 0
-    self.peak_list.heading['text'] = ('%d peaks\n' % len(peaks) +
-                      self.heading(dimension))
-
-
-    # sort by reliability score
-    data = []
-    for peak in peaks:
-        data.append((reliability_score(peak), peak))
-
-
-    peaks = []
-    data = sorted(data, key=lambda data: data[0], reverse=True)
-
-    for (RS, peak) in data:
-      peaks.append(peak)
-
-    self.field_initializations(peaks)
-
-    self.peak_list.clear()
-
-    self.stoppable_loop('peaks', 50)
-    for rank, peak in enumerate(peaks):
-      self.check_for_stop()
-      self.peak_list.append(self.peak_line(peak, rank), peak)
-
-  # ---------------------------------------------------------------------------
-  #
-  def remove_peaks_rs0(self):
-    if self.spectrum:
-      peaks = self.spectrum.peak_list()
-    else:
-      peaks = self.peaks
-
-    threshold = float(self.remove_rs0_thresh.variable.get())
-    delete_count = 0
-
-    confirmation = tkMessageBox.askokcancel(title='Remove peaks?',
-             message='Do you want to remove peaks with ABSOLUTE Reliability Score of ' + str(threshold) + ' and less?')
-
-    if confirmation == True:
-        for peak in peaks:
-            try:
-                if peak.is_assigned == 1:
-                # we won't delete a peak that the user has assigned
-                    continue
-
-                if abs(reliability_score(peak)) <= threshold:
-                    peak.selected = 1
-                    delete_count += 1
-                    self.session.command_characters("")
-            except:
-                continue
-
-        print(str(delete_count) + ' peaks were removes')
-
-        self.sort_reliability()
-
-  # ---------------------------------------------------------------------------
-  #
-  def field_initializations(self, peaks):
-
-    for field in self.settings.fields:
-      if field.onoff:
-        field.initialize(self.session, peaks, self)
-
-  # ---------------------------------------------------------------------------
-  #
-  def peak_line(self, peak, rank):
-
-    line = str(rank + 1)  #default is ''
-    for field in self.settings.fields:
-      if field.onoff:
-        line = line + field.string(peak)
-    return line
-
-  # ---------------------------------------------------------------------------
-  #
-  def heading(self, dim):
-
-    heading = ''
-    for field in self.settings.fields:
-      if field.onoff:
-        heading = heading + field.heading(dim)
-    return heading
-
-# -----------------------------------------------------------------------------
-#
-class peak_list_settings:
-
-  def __init__(self):
-
-    fields = []
-    for fc in field_classes:
-      fields.append(fc())
-
-    self.fields = fields
-    self.sort_by_assignment = 1
-
-  # ---------------------------------------------------------------------------
-  #
-  def show_fields(self, *field_names):
-
-    ftable = {}
-    for f in self.fields:
-      ftable[f.name] = f
-
-    for name in field_names:
-      if name in ftable:
-        ftable[name].onoff = 1
-
-# -----------------------------------------------------------------------------
-
-class peak_list_field:
-  def __init__(self):
-    self.onoff = 0
-
-  def heading(self, dim):
-    try:
-      getattr(self, 'title')
-      return self.pad(self.title(dim), dim)
-    except:
-      return self.pad(self.name, dim)
-
-  def initialize(self, session, peaks, stoppable):
-    pass
-
-  def string(self, peak):
-    return self.pad(self.text(peak), peak.spectrum.dimension)
-
-  def pad(self, string, dim):
-    size = self.size(dim)
-    if size == None:
-      return string
-    return pyutil.pad_field(string, size)
-
-  # ---------------------------------------------------------------------------
-  # Make check button for peak list settings dialog
-  #
-  class field_widgets:
-    def __init__(self, parent, name):
-      cb = tkutil.checkbutton(parent, name, 0)
-      cb.button.pack(side = 'top', anchor = 'w')
-      self.checkbutton = cb
-    def get_widget_state(self, field):
-      field.onoff = self.checkbutton.state()
-    def set_widget_state(self, field):
-      self.checkbutton.set_state(field.onoff)
-
-# ---------------------------------------------------------------------------
-#
-
-def reliability_score(peak):
-    if peak.line_width == None:
-        return 0
-
-    global manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs
-
-    volume = peak.volume
-    SNR = sputil.peak_height(peak) / peak.spectrum.noise
-    linewidth = sum(pyutil.seq_product(peak.line_width, peak.spectrum.hz_per_ppm))
-
-    volume_coeff = 1e7
-    SNR_coeff = 10
-    linewidth_coeff = 0.1
-
-    try:
-        if manual_coeff.get():
-            volume_coeff = float(coeff1.variable.get())
-            SNR_coeff = float(coeff2.variable.get())
-            linewidth_coeff = float(coeff3.variable.get())
-
-            if SNR_abs.get():
-                SNR = abs(SNR)
-
-            if volume_abs.get():
-                volume = abs(volume)
-
-    except:
-        pass
-
-    try:
-        RS = (volume / volume_coeff) + (SNR * SNR_coeff) + (linewidth * linewidth_coeff)
-    except:
-        RS = 0
-
-
-    return RS
-
-field_classes = []
-
-# ---------------------------------------------------------------------------
-#
-#class rank_field(peak_list_field):
-#  name = 'Rank'
-#  def size(self, dim): return 5
-#  def text(self, peak): return 1
-#field_classes.append(rank_field)
-
-# ---------------------------------------------------------------------------
-#
-class assignment_field(peak_list_field):
-  name = 'Assignment'
-  def size(self, dim): return 8 * dim
-  def text(self, peak): return sputil.assignment_name(peak.resonances())
-field_classes.append(assignment_field)
-
-# -------------------------------------------------------------------------
-#
-class chemical_shift_field(peak_list_field):
-  name = 'Chemical Shift'
-  def title(self, dim): return 'Shift (ppm)'
-  def size(self, dim): return 8 * dim
-  def text(self, peak):
-    return pyutil.sequence_string(peak.frequency, ' %7.3f')
-field_classes.append(chemical_shift_field)
-
-# -------------------------------------------------------------------------
-#
-class volume_field(peak_list_field):
-  name = 'Volume'
-  def size(self, dim): return 10
-  def text(self, peak):
-    if peak.volume: return '%.3g' % peak.volume
-    return ''
-field_classes.append(volume_field)
-
-# -------------------------------------------------------------------------
-#
-class data_height_field(peak_list_field):
-  name = 'Data Height'
-  def title(self, dim): return 'Height'
-  def size(self, dim): return 10
-  def text(self, peak):
-    return '%.3g' % sputil.peak_height(peak)
-field_classes.append(data_height_field)
-
-# -------------------------------------------------------------------------
-#
-class signal_to_noise_field(peak_list_field):
-  name = 'Signal / Noise'
-  def title(self, dim): return 'S/N'
-  def size(self, dim): return 10
-  def text(self, peak):
-    return '%.1f' % (sputil.peak_height(peak) / peak.spectrum.noise)
-field_classes.append(signal_to_noise_field)
-
-# -------------------------------------------------------------------------
-#
-class fit_height_field(peak_list_field):
-  name = 'Fit Height'
-  def size(self, dim): return 11
-  def text(self, peak):
-    if peak.fit_height == None: return ''
-    return '%.3g' % peak.fit_height
-field_classes.append(fit_height_field)
-
-# -------------------------------------------------------------------------
-#
-class linewidth_field(peak_list_field):
-  name = 'Linewidth'
-  def title(self, dim): return 'Linewidth (Hz)'
-  def size(self, dim): return 8 * dim
-  def text(self, peak):
-    if peak.line_width == None: return ''
-    linewidth = pyutil.seq_product(peak.line_width,
-                                   peak.spectrum.hz_per_ppm)
-    return pyutil.sequence_string(linewidth, ' %7.2f')
-field_classes.append(linewidth_field)
-
-# -------------------------------------------------------------------------
-#
-class color_field(peak_list_field):
-  name = 'Color'
-  def size(self, dim): return 8
-  def text(self, peak): return '%8s' % peak.color
-field_classes.append(color_field)
-
-# -------------------------------------------------------------------------
-#
-class RS_field(peak_list_field):
-  name = 'Reliability Score'
-  def title(self, dim): return 'Reliability Score'
-  def size(self, dim): return 10 * dim
-  def text(self, peak): return ' %7.2f' % reliability_score(peak)
-field_classes.append(RS_field)
-
-
-# -------------------------------------------------------------------------
-#
-class note_field(peak_list_field):
-  name = 'Note'
-  def size(self, dim): return 21
-  def text(self, peak): return ' %-20s' % peak.note
-field_classes.append(note_field)
-
-
-# -----------------------------------------------------------------------------
-# Dialog of possible peak list fields.
-#
-class peak_list_settings_dialog(tkutil.Settings_Dialog):
-
-  def __init__(self, session):
-
-    tkutil.Settings_Dialog.__init__(self, session.tk, 'Peak List Settings')
-
-    fb = tk.Frame(self.top, borderwidth = 3, relief = 'groove')
-    fb.pack(side = 'top', fill = 'x')
-
-    #
-    # Create the checkbutton and Manual Coefficients section
-    #
-    self.field_widgets = {}
-    for fc in field_classes:
-      self.field_widgets[fc] = fc.field_widgets(self.top, fc.name)
-
-
-    opt = tk.Frame(self.top, borderwidth = 3, relief = 'groove')
-    opt.pack(side = 'top', fill = 'x')
-
-    global manual_coeff, coeff1, coeff2, coeff3, SNR_abs, volume_abs
-
-    manual_coeff = tk.BooleanVar()
-    manual_coeff.set(False)
-    checkbox_coeff = tk.Checkbutton(opt, highlightthickness=0, text='Manual Coefficients',
-                                    variable=manual_coeff, command=self.show_coeff_settings)
-    checkbox_coeff.pack(side='top', anchor='w')
-    tkutil.create_hint(checkbox_coeff, 'Manually specify the coefficients for the Reliability Score formula')
-
-
-    coeff1 = tkutil.entry_field(opt, 'Volume Coeff.: ', width=5, initial='1e7')
-    tkutil.create_hint(coeff1.frame, 'Specify the coefficient for the Volume in the Reliability Score formula')
-
-    coeff2 = tkutil.entry_field(opt, 'SNR Coeff.: ', width=5, initial='10')
-    tkutil.create_hint(coeff2.frame, 'Specify the coefficient for the Signal to Noise Ratio (SNR) in the Reliability Score formula')
-
-
-    coeff3 = tkutil.entry_field(opt, 'Linewidth Coeff.: ', width=5, initial='0.1')
-    tkutil.create_hint(coeff3.frame, 'Specify the coefficient for the Linewidth in the Reliability Score formula')
-
-    SNR_abs = tk.BooleanVar()
-    SNR_abs.set(True)
-    self.checkbox_SNR_abs = tk.Checkbutton(opt, highlightthickness=0, text='Absolute SNR',
-                                           variable=SNR_abs)
-    tkutil.create_hint(self.checkbox_SNR_abs, 'If checked, the Reliability Score will only have absolute values for SNR')
-
-    volume_abs = tk.BooleanVar()
-    volume_abs.set(False)
-    self.checkbox_volume_abs = tk.Checkbutton(opt, highlightthickness=0, text='Absolute Volume',
-                                              variable=volume_abs)
-    tkutil.create_hint(self.checkbox_volume_abs, 'If checked, the Reliability Score will only have absolute values for Volume')
-
-
-    br = tkutil.button_row(self.top,
-                      ('Ok', self.ok_cb),
-                      ('Apply', self.apply_cb),
-                      ('Close', self.close_cb),
-                      )
-    br.frame.pack(side = 'top', anchor = 'w')
-
-
-  # ---------------------------------------------------------------------------
-  #
-  def show_coeff_settings(self):
-    if manual_coeff.get():
-        coeff1.frame.pack(side='top', anchor = 'w')
-        coeff2.frame.pack(side='top', anchor = 'w')
-        coeff3.frame.pack(side='top', anchor = 'w')
-        self.checkbox_SNR_abs.pack(side='bottom', anchor='w')
-        self.checkbox_volume_abs.pack(side='bottom', anchor='w')
-    else:
-        coeff1.frame.pack_forget()
-        coeff2.frame.pack_forget()
-        coeff3.frame.pack_forget()
-        self.checkbox_SNR_abs.pack_forget()
-        self.checkbox_volume_abs.pack_forget()
-
-
-  # ---------------------------------------------------------------------------
-  #
-  def show_settings(self, settings):
-
-    for f in settings.fields:
-        #self.field_widgets[f.__class__].set_widget_state(f)
-        try:
-            self.field_widgets[f.__class__].set_widget_state(f)
-        except:
-            pass
-            #print f.__class__
-
-  # ---------------------------------------------------------------------------
-  #
-  def get_settings(self):
-
-    settings = peak_list_settings()
-    for f in settings.fields:
-        self.field_widgets[f.__class__].get_widget_state(f)
-
-    return settings
 
 
 # -----------------------------------------------------------------------------
