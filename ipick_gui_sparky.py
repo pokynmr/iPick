@@ -192,11 +192,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
    
     b_xcheck_button = tk.Button(b_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
     b_xcheck_button.pack(side='left')
-    tkutil.create_hint(b_xcheck_button, 'Use the Cross-Validation tool for removing noise peaks')
+    tkutil.create_hint(b_xcheck_button, 'Opens the Cross-Validation module for investigating the peaks / finding noise peaks')
 
     b_ipick_button = tk.Button(b_buttons_frm2, text='Peak List', width=10, command=self.show_peak_list)
     b_ipick_button.pack(side='left')
-    tkutil.create_hint(b_ipick_button, 'Open the Peak List for the selected spectrum')
+    tkutil.create_hint(b_ipick_button, 'Opens the Peak List for the selected spectrum')
 
 
 #TODO: Add the section for iPick to the extensions.html file
@@ -466,7 +466,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     a_xcheck_button = tk.Button(a_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
     a_xcheck_button.pack(side='left')
-    tkutil.create_hint(a_xcheck_button, 'Use the Cross-Validation tool for removing noise peaks')
+    tkutil.create_hint(a_xcheck_button, 'Opens the Cross-Validation module for investigating the peaks / finding noise peaks')
 
     a_ipick_button = tk.Button(a_buttons_frm2, text='Peak List', width=10, command=self.show_peak_list)
     a_ipick_button.pack(side='left')

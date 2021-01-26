@@ -34,7 +34,7 @@ try:
   from matplotlib import use as matplotlib_use
   matplotlib_use('TkAgg')
 except:
-  pass
+  print("Exception happened for importing 'matplotlib use'")
 
 from matplotlib.pyplot import subplots, subplots_adjust, ion, show, draw
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -210,7 +210,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     
     hist_button = tk.Button(buttonsfrm2, text='Peak Histogram', width=16,  command=self.run_histogram)
     hist_button.pack(side='left')
-    tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances. The above settings do NOT effect this')
+    tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances.')
 
 
 
@@ -585,15 +585,21 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     #progress_label.pack(side='top', anchor='w')
 
     self.plot_frame = tk.Frame(self.top)
-    self.plot_frame.pack(side='top', fill='both', expand=1, padx=4, pady=(3,0))
+    self.plot_frame.pack(side='top', expand=1, padx=4, pady=(3,0))
+    
+    button_frame = tk.Frame(self.top)
+    button_frame.pack(side='top', pady=(0,15), anchor='center')
 
-    hist_button = tk.Button(self.top, text='Show the selected peak',
-                            command=self.show_peak_in_hist)
-    hist_button.pack(side='top', pady=(0,15))
-    tkutil.create_hint(hist_button,
-        'Select one or more peaks in the experiment and click this button to show them on the histograms')
+    self.show_select_button = tk.Button(button_frame, text='Zoom in on selected peak(s)', command=self.show_peak_in_hist)
+    self.show_select_button.pack(side='left')
+    tkutil.create_hint(self.show_select_button, 'Select one or more peaks in the experiment and click this button to show them on the histograms')
+        
+    self.zoom_out_button = tk.Button(button_frame, text='Zoom Out', command=self.zoom_out)
+    self.zoom_out_button.pack(side='left', padx=2)
+    tkutil.create_hint(self.zoom_out_button, 'Zoom out the view on all figures')
 
 
+# ---------------------------------------------------------------------------
   def show_histograms(self, H_hist, N_hist, C_hist, H_bin, N_bin, C_bin):
     print('\nH:')
     print(H_hist)
@@ -601,12 +607,9 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     print(N_hist)
     print('\nC:')
     print(C_hist)
-
+    self.H_hist, self.N_hist, self.C_hist = H_hist, N_hist, C_hist
 
     self.fig, self.axes = subplots(figsize=(20, 5), nrows=1, ncols=3)
-    #if sys.platform == 'darwin':
-    #    ion()
-    #    show(block=False)
 
     self.fig.set_facecolor("white")
     subplots_adjust(left=0.04, bottom=0.1, right=0.98, top=0.90, wspace=0.14)
@@ -616,65 +619,126 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.axes[0].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #if sys.platform == 'darwin':
-    #    pause(0.001)
 
     self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
     self.axes[1].set_title ("N", fontsize=16)
     self.axes[1].set_ylabel("Number of occurrences", fontsize=12)
-    #self.axes[1].set_ylabel("Counts", fontsize=12)
     self.axes[1].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #if sys.platform == 'darwin':
-    #    pause(0.001)
 
     self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin)
     self.axes[2].set_title ("C", fontsize=16)
     self.axes[2].set_ylabel("Number of occurrences", fontsize=12)
-    #self.axes[2].set_ylabel("Counts", fontsize=12)
     self.axes[2].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
-    #if sys.platform == 'darwin':
-    #    pause(0.001)
 
-    #if sys.platform != 'darwin':
     self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
     self.canvas.get_tk_widget().pack()
     self.canvas.draw()
 
     toolbar = NavTB(self.canvas, self.plot_frame)
     toolbar.update()
+    
+    self.ax0_xlim = self.axes[0].get_xlim()
+    self.ax0_ylim = self.axes[0].get_ylim()
+    self.ax1_xlim = self.axes[1].get_xlim()
+    self.ax1_ylim = self.axes[1].get_ylim()
+    self.ax2_xlim = self.axes[2].get_xlim()
+    self.ax2_ylim = self.axes[2].get_ylim()
 
 
+# ---------------------------------------------------------------------------
   def show_peak_in_hist(self, *args):
     spec = self.session.selected_spectrum()
     peaks = self.session.selected_peaks()
     text_style = dict(size=30)
+    
+    if not peaks:
+        tkMessageBox.showwarning(title='Error', message='You need to select some peaks on a spectrum first!')
+        return
 
     try:
-        for txt in self.txt:
-            txt.remove()
+        if not self.txt:
+            for txt in self.txt:
+                txt.remove()
     except:
         pass
 
+
     self.txt = []
+    H_list = []
+    N_list = []
+    C_list = []
     for n in range(len(spec.nuclei)):
         if spec.nuclei[n] == '1H':
                 this_axes = self.axes[0]
+                this_range = H_list
         elif spec.nuclei[n] == '15N':
                 this_axes = self.axes[1]
+                this_range = N_list
         elif spec.nuclei[n] == '13C':
                 this_axes = self.axes[2]
+                this_range = C_list
 
         for peak in peaks:
             self.txt.append(this_axes.text(peak.frequency[n], 0, 'x', **text_style))
-    #if sys.platform != 'darwin':
+            this_range.append(peak.frequency[n])
+           
+            
+    # zoom in        
+    if H_list:
+        H_min = min(H_list)
+        H_max = max(H_list)
+        H_hrange = (H_max - H_min) / 2
+        
+        H_heights = []
+        for i in H_list:
+            val = self.H_hist.get(i) or self.H_hist[min(self.H_hist.keys(), key = lambda key: abs(key-i))] 
+            H_heights.append(val)
+            
+        self.axes[0].set_xlim(H_min - H_hrange, H_max + H_hrange)
+        self.axes[0].set_ylim(0, max(H_heights)*1.5)  # 50% more than the highest bar for "those" shifts
+    
+    if N_list:
+        N_min = min(N_list)
+        N_max = max(N_list)
+        N_hrange = (N_max - N_min) / 2
+        
+        N_heights = []
+        for i in N_list:
+            val = self.N_hist.get(i) or self.N_hist[min(self.N_hist.keys(), key = lambda key: abs(key-i))] 
+            N_heights.append(val)
+            
+        self.axes[1].set_xlim(N_min - N_hrange, N_max + N_hrange)
+        self.axes[1].set_ylim(0, max(N_heights)*1.5)  
+    
+    if C_list:
+        C_min = min(C_list)
+        C_max = max(C_list)
+        C_hrange = (C_max - C_min) / 2
+        
+        C_heights = []
+        for i in C_list:
+            val = self.C_hist.get(i) or self.C_hist[min(self.C_hist.keys(), key = lambda key: abs(key-i))] 
+            C_heights.append(val)
+            
+        self.axes[2].set_xlim(C_min - C_hrange, C_max + C_hrange)
+        self.axes[2].set_ylim(0, max(C_heights)*1.5)         
+            
+            
     self.canvas.draw()
-    #else:
-    #    draw()
-    #    if sys.platform == 'darwin':
-    #        pause(0.001)
 
+
+# ---------------------------------------------------------------------------
+  def zoom_out(self, *args):
+    self.axes[0].set_xlim(self.ax0_xlim)
+    self.axes[0].set_ylim(self.ax0_ylim)
+    self.axes[1].set_xlim(self.ax1_xlim)
+    self.axes[1].set_ylim(self.ax1_ylim)
+    self.axes[2].set_xlim(self.ax2_xlim)
+    self.axes[2].set_ylim(self.ax2_ylim)
+    self.canvas.draw()
+    
 
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
