@@ -658,7 +658,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         return
 
     try:
-        if not self.txt:
+        if self.txt:
             for txt in self.txt:
                 txt.remove()
     except:
