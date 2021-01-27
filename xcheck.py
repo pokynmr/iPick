@@ -183,15 +183,15 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     bins_frm = tk.Frame(btmfrm)
     bins_frm.pack(side='top', fill='both', expand=1, pady=(0,10))
 
-    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=5, initial='0.1')
+    self.bin_H = tkutil.entry_field(bins_frm, '1H: ', width=5, initial='0.02')
     self.bin_H.frame.pack(side='left', padx=(18,10))
     tkutil.create_hint(self.bin_H.frame, 'Bin steps for H histogram')
 
-    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=5, initial='1')
+    self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=5, initial='0.2')
     self.bin_N.frame.pack(side='left', padx=(3,10))
     tkutil.create_hint(self.bin_N.frame, 'Bin steps for N histogram')
     
-    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=5, initial='1')
+    self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=5, initial='0.2')
     self.bin_C.frame.pack(side='left', padx=(3,10))
     tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
 
@@ -563,10 +563,18 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         tkMessageBox.showwarning(title='Error', message='No spectrum is loaded!')
         return
 
+    spec = self.spec_list[0]
+    try:
+        for spec in self.spec_list:
+            if spec.name == self.specs_names[0]:
+                break
+    except:
+        pass
+
     d = peak_list_dialog.peak_list_dialog(self.session)
     d.show_window(1)
     d.settings.show_fields('Assignment', 'Chemical Shift', 'Note')
-    d.show_spectrum_peaks(self.spec_list[0])
+    d.show_spectrum_peaks(spec)
     #d.sort_reliability()
 
 
@@ -689,7 +697,10 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     if H_list:
         H_min = min(H_list)
         H_max = max(H_list)
-        H_hrange = (H_max - H_min) / 2
+        H_hrange = (H_max - H_min) * 2
+        max_range = max(self.ax0_xlim) - min(self.ax0_xlim)
+        if (H_hrange > max_range) or (H_hrange < max_range*0.1):
+            H_hrange = max_range*0.1
         
         H_heights = []
         for i in H_list:
@@ -697,12 +708,15 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
             H_heights.append(val)
             
         self.axes[0].set_xlim(H_min - H_hrange, H_max + H_hrange)
-        self.axes[0].set_ylim(0, max(H_heights)*1.5)  # 50% more than the highest bar for "those" shifts
+        self.axes[0].set_ylim(0, max(H_heights)*1.1)  # 10% more than the highest bar for "those" shifts
     
     if N_list:
         N_min = min(N_list)
         N_max = max(N_list)
-        N_hrange = (N_max - N_min) / 2
+        N_hrange = (N_max - N_min) * 2
+        max_range = max(self.ax1_xlim) - min(self.ax1_xlim)
+        if (N_hrange > max_range) or (N_hrange < max_range*0.1):
+            N_hrange = max_range*0.1
         
         N_heights = []
         for i in N_list:
@@ -710,12 +724,15 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
             N_heights.append(val)
             
         self.axes[1].set_xlim(N_min - N_hrange, N_max + N_hrange)
-        self.axes[1].set_ylim(0, max(N_heights)*1.5)  
+        self.axes[1].set_ylim(0, max(N_heights)*1.1)  
     
     if C_list:
         C_min = min(C_list)
         C_max = max(C_list)
-        C_hrange = (C_max - C_min) / 2
+        C_hrange = (C_max - C_min) * 2
+        max_range = max(self.ax2_xlim) - min(self.ax2_xlim)
+        if (C_hrange > max_range) or (C_hrange < max_range*0.1):
+            C_hrange = max_range*0.1
         
         C_heights = []
         for i in C_list:
@@ -723,7 +740,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
             C_heights.append(val)
             
         self.axes[2].set_xlim(C_min - C_hrange, C_max + C_hrange)
-        self.axes[2].set_ylim(0, max(C_heights)*1.5)         
+        self.axes[2].set_ylim(0, max(C_heights)*1.1)         
             
             
     self.canvas.draw()

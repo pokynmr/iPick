@@ -198,6 +198,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.spectrum = spectrum
     self.peaks = None
     self.stoppable_call(self.update_peaks)
+    self.spectrum_selection.set(spectrum.name)
 
   # ---------------------------------------------------------------------------
   #
