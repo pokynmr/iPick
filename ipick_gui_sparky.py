@@ -33,15 +33,27 @@ except:
 import peak_list_dialog
 import xcheck
 
-if os.path.exists('/usr/bin/python') or ('anaconda' in os.environ['PATH']) or ('python' in os.environ['PATH']):
-    PYTHON_BIN = 'python'
-    PYTHON_INSTALLED = True
-else:
+
+if 'sparky' in sys.modules:
     # if the version for the python packaged with Sparky changed, correct the lines bellow:
     PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'bin', 'python2.7')      # Linux
     if not os.path.exists(PYTHON_BIN):
-        PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')    # Windows
-    PYTHON_INSTALLED = False
+        PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')            # Windows
+    if not os.path.exists(PYTHON_BIN):
+        print('Poky Python was not found!')
+        PYTHON_BIN = 'pyhton'
+        
+else:   # poky
+    # if the version for the python packaged with Poky changed, correct the lines bellow:
+    PYTHON_BIN = os.path.join(poky.installation_path(), 'bin', 'python3.7m')                            # Mac
+    if not os.path.exists(PYTHON_BIN):
+        PYTHON_BIN = os.path.join(poky.installation_path(), 'python3.7_linux', 'bin', 'python3.7m')     # Linux
+    if not os.path.exists(PYTHON_BIN):
+        PYTHON_BIN = os.path.join(poky.installation_path(), 'python37_win', 'python.exe')               # Windows
+    if not os.path.exists(PYTHON_BIN):
+        print('Poky Python was not found!')
+        PYTHON_BIN = 'pyhton'
+        
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
@@ -796,7 +808,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
   def ipick_process(self, UCSF_FILE):
 
     CPUs = str(multiprocessing.cpu_count())
-    if not PYTHON_INSTALLED:
+    if OS_WINDOWS:
         CPUs = '1'
 
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
