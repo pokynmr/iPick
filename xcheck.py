@@ -622,19 +622,19 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.fig.set_facecolor("white")
     subplots_adjust(left=0.04, bottom=0.1, right=0.98, top=0.90, wspace=0.14)
 
-    self.axes[0].bar(list(H_hist.keys()), H_hist.values(), color='#3dff3d', width=H_bin)
+    self.axes[0].bar(list(H_hist.keys()), H_hist.values(), color='#3dff3d', width=H_bin, edgecolor='#32D032')
     self.axes[0].set_title ("H", fontsize=16)
     self.axes[0].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[0].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
 
-    self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin)
+    self.axes[1].bar(list(N_hist.keys()), N_hist.values(), color='#00ffff', width=N_bin, edgecolor='#00E3E3')
     self.axes[1].set_title ("N", fontsize=16)
     self.axes[1].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[1].set_xlabel("Chemical shift (ppm)", fontsize=12)
     draw()
 
-    self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin)
+    self.axes[2].bar(list(C_hist.keys()), C_hist.values(), color='#ffe23d', width=C_bin, edgecolor='#E0C837')
     self.axes[2].set_title ("C", fontsize=16)
     self.axes[2].set_ylabel("Number of occurrences", fontsize=12)
     self.axes[2].set_xlabel("Chemical shift (ppm)", fontsize=12)
