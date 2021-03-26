@@ -16,10 +16,12 @@ import multiprocessing
 
 if sys.version_info[0] == 2:
   import Tkinter as tk
+  #from ttk import Combobox
   import tkMessageBox
   import tkFont
 else:
   import tkinter as tk
+  from tkinter.ttk import Combobox
   import tkinter.messagebox as tkMessageBox
   import tkinter.font as tkFont
 
@@ -256,6 +258,11 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     a_listbox_frm.pack(side='top', fill='both', expand=0, padx=8)
 
 
+    # software
+    a_software_frm = tk.Frame(self.adv_frame)
+    a_software_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
+    
+
     # pos neg peaks
     a_pos_neg_frm = tk.Frame(self.adv_frame)
     a_pos_neg_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
@@ -299,6 +306,41 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     #a_update_button.pack(side='top', anchor='w', expand=0, pady=(0, 5))
 
 
+    # Sparky doesn't have nmrglue and also cannot load the ttk module
+    if sys.version_info[0] > 2:
+        a_software_label = tk.Label(a_software_frm, text="Select the backbone software: ")
+        a_software_label.pack(side='left', fill='both')
+
+        self.ucsftool_nmrglue = Combobox(a_software_frm, values=[' UCSFtool ', ' nmrglue '], state='readonly', width=9)
+        self.ucsftool_nmrglue.current(0)
+        self.ucsftool_nmrglue.pack(side='left')
+        
+        tkutil.create_hint(a_software_label, 'Select the backbone software for detecting the local extrema.')
+        tkutil.create_hint(self.ucsftool_nmrglue, 'Select the backbone software for detecting the local extrema.')   
+            
+
+
+    pos_neg_label = tk.Label(a_pos_neg_frm, text="Select:")
+    pos_neg_label.pack(side='left', fill='both')
+    self.pos_neg = tk.StringVar()
+    self.pos_neg.set('0')
+
+    radio_pos = tk.Radiobutton(a_pos_neg_frm, text="Positive peaks", highlightthickness=0,
+                                        variable=self.pos_neg, value='1')
+    radio_pos.pack(side='left')
+
+    radio_neg = tk.Radiobutton(a_pos_neg_frm, text="Negative peaks", highlightthickness=0,
+                                        variable=self.pos_neg, value='-1')
+    radio_neg.pack(side='left')
+    radio_both = tk.Radiobutton(a_pos_neg_frm, text="Both", highlightthickness=0,
+                                        variable=self.pos_neg, value='0')
+    radio_both.pack(side='left')
+    radio_both.select()
+    tkutil.create_hint(radio_pos, 'Select positive peaks only')
+    tkutil.create_hint(radio_neg, 'Select negative peaks only')
+    tkutil.create_hint(radio_both, 'Select both positive and negative peaks')
+    
+    
     nois_cont_label = tk.Label(a_nois_cont_frm, text="Use:")
     nois_cont_label.pack(side='left', fill='both')
     self.nois_cont = tk.StringVar()
@@ -343,27 +385,6 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_contour.frame.pack(side='top', fill='x', expand=1)
     tkutil.create_hint(self.a_contour_button, 'Get the automatic contour level selection')
     tkutil.create_hint(self.a_contour.frame, 'The automatic contour level is shown here. You can change it as you like.')
-
-
-    pos_neg_label = tk.Label(a_pos_neg_frm, text="Select:")
-    pos_neg_label.pack(side='left', fill='both')
-    self.pos_neg = tk.StringVar()
-    self.pos_neg.set('0')
-
-    radio_pos = tk.Radiobutton(a_pos_neg_frm, text="Positive peaks", highlightthickness=0,
-                                        variable=self.pos_neg, value='1')
-    radio_pos.pack(side='left')
-
-    radio_neg = tk.Radiobutton(a_pos_neg_frm, text="Negative peaks", highlightthickness=0,
-                                        variable=self.pos_neg, value='-1')
-    radio_neg.pack(side='left')
-    radio_both = tk.Radiobutton(a_pos_neg_frm, text="Both", highlightthickness=0,
-                                        variable=self.pos_neg, value='0')
-    radio_both.pack(side='left')
-    radio_both.select()
-    tkutil.create_hint(radio_pos, 'Select positive peaks only')
-    tkutil.create_hint(radio_neg, 'Select negative peaks only')
-    tkutil.create_hint(radio_both, 'Select both positive and negative peaks')
 
 
     # separator
@@ -810,12 +831,15 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     CPUs = str(multiprocessing.cpu_count())
     if OS_WINDOWS:
         CPUs = '1'
+        
+    ucsftool_nmrglue = self.ucsftool_nmrglue.get().lower().strip()
 
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
             " -i " + "\"" + UCSF_FILE + "\"" +
             " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
             " -r " + self.resolution +
             " -c " + CPUs +
+            " -s " + ucsftool_nmrglue +
             " --sign " + self.pos_neg.get() +
             " --overwrite")
 
@@ -827,6 +851,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                 " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
                 " -r " + self.resolution +
                 " -c " + CPUs +
+                " -s " + ucsftool_nmrglue +
                 " --sign " + self.pos_neg.get() +
                 " --threshold " + self.a_noise.variable.get() +
                 " --overwrite")
@@ -839,6 +864,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
                " -o " + "\"" + self.PEAKLIST_FILE + "\"" +
                " -r " + self.resolution +
                " -c " + CPUs +
+               " -s " + ucsftool_nmrglue +
                " --sign " + self.pos_neg.get() +
                " --threshold " + self.a_contour.variable.get() +
                " --overwrite")

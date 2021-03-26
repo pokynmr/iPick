@@ -188,6 +188,7 @@ def main():
     ndim = len(ut.axis_header_list)
     print_log('Using UCSFTOOL to sample noise level.')
 
+    peak_sign = int(args.sign)
     noise = ut.sample_noise(100)
 
     if args.threshold:
@@ -208,7 +209,6 @@ def main():
         else:
             res = [args.res] * ndim
         print_log('Resolution setting: ', res[0])
-        peak_sign = int(args.sign)
         #grid_peaks, _ = ut.find_peaks(noiselevel, res, sign=peak_sign, verbose=True)
         import runpy
         if sys.version_info[0] == 2:
@@ -230,7 +230,15 @@ def main():
         try:
             import nmrglue as ng
             _, data = ng.sparky.read(in_filename)
-            grid_peaks = ng.analysis.peakpick.pick(data, noiselevel, nthres=-1*noiselevel)
+            pthres = noiselevel
+            nthres = -1 * noiselevel
+            if peak_sign == 1:
+                nthres = None
+            elif peak_sign == -1:
+                pthres = None
+            # https://nmrglue.readthedocs.io/en/latest/reference/generated/nmrglue.analysis.peakpick.pick.html
+            # msep = 
+            grid_peaks = ng.analysis.peakpick.pick(data, pthres=pthres, nthres=nthres, algorithm='connected')
         except ImportError:
             print_log('Importing NMRGLUE failed. Using UCSFtool instead.')
 
@@ -243,8 +251,15 @@ def main():
     # interpolation and get adjusted data heights
     print_log('Using UCSFTOOL to interpolate and obtain adjusted heights.')
     peak_list, hts_list = [], []
-    for i in range(len(grid_peaks)):
-        grid_peak, grid_ht = grid_peaks[i], grid_hts[i]
+    
+    for grid_peak in grid_peaks:
+        grid_pt = ()
+        for i in range(ndim):
+            grid_pt += (int(grid_peak[i]),)
+            
+    #for i in range(len(grid_peaks)):
+        #grid_peak = grid_peaks[i]
+        #grid_peak, grid_ht = grid_peaks[i], grid_hts[i]
         #print(grid_ht)
         #print(grid_peak)
         #grid_pt = ()
@@ -253,7 +268,9 @@ def main():
         #shifts, value = ut.get_interpolated_data(grid_pt)
         #shifts = ut.grids_to_shifts(grid_peak)
         #value = grid_ht
-        shifts, value = ut.get_interpolated_data(grid_peak, noise_level = noiselevel)
+        #shifts, value = ut.get_interpolated_data(grid_peak, noise_level = noiselevel)
+        
+        shifts, value = ut.get_interpolated_data(grid_pt, noise_level = noiselevel)
         if shifts == None:
             continue
         peak_list.append(shifts)
