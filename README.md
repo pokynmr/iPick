@@ -5,7 +5,7 @@ _______________________________________________________
 
 ## Introduction
 
-The iPick program is available as a module for the POKY and NMRFAM-SPARKY. It is highly recommended that you use the POKY/SPARKY module instead of the command line tool. The main reasons are the ease of work and the extended capabilities provided in the module. For example, using the SPARKY module, you can easily select the experiment you are interested in and click a button to perform the peak picking task.
+The iPick program is available as a module for the POKY and NMRFAM-SPARKY. It is highly recommended that you use the module instead of the command line tool. The main reasons are the ease of work and the extended capabilities provided in the module. For example, using the module, you can easily select the experiment you are interested in and click a button to perform the peak picking task.
 There are also many capabilities built into the module. One example is the newly proposed *Reliability Score* feature that can help a researcher to determine the noise peaks easily.
     
     
@@ -14,12 +14,14 @@ _______________________________________________________
 ## Running the iPick module
 
 The module is integrated into the latest version of POKY and NMRFAM-SPARKY programs which makes starting the program much easier. To get the latest version use these links:
+
 To get POKY:  https://poky.clas.ucdenver.edu
+
 To get NMRFAM-SPARKY:  https://nmrfam.wisc.edu/nmrfam-sparky-distribution/
 
 If you are using POKY, you can open the iPick module by using the _two-letter-code_ **iP**.
 
-If you are using NMRFAM-SPARKY, after installing and running NMRFAM-SPARKY, you can open the iPick module by using the _two-letter-code_ **iP**.
+If you are using NMRFAM-SPARKY, you can open the iPick module by using the _two-letter-code_ **iP**.
 Alternatively, you can use the top menu and open "Extensions", from there, navigate to "Peak" menu and find "iPick Peak Picker".
     
     
@@ -52,7 +54,7 @@ and then use the *pwd* command to see the full address:
 In this case, the full address is */home/samic/iPick*
 
 
-Then, inside the POKY or SPARKY window, open the Python module by typing the two-letter-code *py*
+Then, inside the POKY or NMRFAM-SPARKY window, open the Python module by typing the two-letter-code **py**
 
 
 <img src="figures/python-module.png" width="600" border="1">
@@ -110,7 +112,7 @@ Each peak will be examined and corresponding peaks in other spectra will be note
 
 <img src="figures/cross-peaklist.png" width="650" border="1">
 
-The frequency of the resonances for each peak will be visualized in the Peak Histogram (Figure 5) by clicking the Peak Histogram button of the cross-validation window. Less frequently occurring resonances help the user to identify false-positives. It is also possible for the user to view associated histogram bars on the histogram by selecting one or more peaks from the spectral views and clicking the Show the selected peaks button.
+The frequency of the resonances for each peak will be visualized in the Peak Histogram (Figure below) by clicking the Peak Histogram button of the cross-validation window. Less frequently occurring resonances help the user to identify false-positives. It is also possible for the user to view associated histogram bars on the histogram by selecting one or more peaks from the spectral views and clicking the Show the selected peaks button.
 
 <img src="figures/histogram.png" width="900" border="1">
     
@@ -129,7 +131,7 @@ There are more options that you can use with the command line script. To see a f
 
     python iPick.py
 
-Please note that it is highly recommended that you use the SPARKY module instead of the command line tool.
+Please note that it is highly recommended that you use the POKY or NMRFAM-SPARKY module instead of the command line tool.
 
 Here is an example of running iPick script:
 
@@ -142,7 +144,7 @@ _______________________________________________________
 
 ## Windows Users
 
-The iPick program runs natively on Mac, Linux and Windows. However, multiprocessing of Python is limited in Windows due to its kernel architecture. To overcome this issue, a user can use WSL2 (Windows Subsystem for Linux) and install the linux64 version of NMRFAM-SPARKY.
+The iPick program runs natively on Mac, Linux and Windows. However, multiprocessing of Python is limited in Windows due to its kernel architecture. To overcome this issue, a user can use WSL2 (Windows Subsystem for Linux):
 
 https://www.windowscentral.com/how-install-wsl2-windows-10
 
