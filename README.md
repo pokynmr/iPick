@@ -5,7 +5,7 @@ _______________________________________________________
 
 ## Introduction
 
-The iPick program is available as a module for the NMRFAM-SPARKY. It is highly recommended that you use the SPARKY module instead of the command line tool. The main reasons are the ease of work and the extended capabilities provided in the module. For example, using the SPARKY module, you can easily select the experiment you are interested in and click a button to perform the peak picking task.
+The iPick program is available as a module for the POKY and NMRFAM-SPARKY. It is highly recommended that you use the POKY/SPARKY module instead of the command line tool. The main reasons are the ease of work and the extended capabilities provided in the module. For example, using the SPARKY module, you can easily select the experiment you are interested in and click a button to perform the peak picking task.
 There are also many capabilities built into the module. One example is the newly proposed *Reliability Score* feature that can help a researcher to determine the noise peaks easily.
     
     
@@ -13,10 +13,13 @@ _______________________________________________________
 
 ## Running the iPick module
 
-The module is integrated into the latest version of NMRFAM-SPARKY program which makes starting the program much easier. To get the latest version use this link:
-https://nmrfam.wisc.edu/nmrfam-sparky-distribution/
+The module is integrated into the latest version of POKY and NMRFAM-SPARKY programs which makes starting the program much easier. To get the latest version use these links:
+To get POKY:  https://poky.clas.ucdenver.edu
+To get NMRFAM-SPARKY:  https://nmrfam.wisc.edu/nmrfam-sparky-distribution/
 
-After installing and running NMRFAM-SPARKY, you can open the iPick module by using the _two-letter-code_ **iP**.     
+If you are using POKY, you can open the iPick module by using the _two-letter-code_ **iP**.
+
+If you are using NMRFAM-SPARKY, after installing and running NMRFAM-SPARKY, you can open the iPick module by using the _two-letter-code_ **iP**.
 Alternatively, you can use the top menu and open "Extensions", from there, navigate to "Peak" menu and find "iPick Peak Picker".
     
     
@@ -49,7 +52,7 @@ and then use the *pwd* command to see the full address:
 In this case, the full address is */home/samic/iPick*
 
 
-Then, inside the SPARKY window, open the Python module by typing the two-letter-code *py*
+Then, inside the POKY or SPARKY window, open the Python module by typing the two-letter-code *py*
 
 
 <img src="figures/python-module.png" width="600" border="1">
