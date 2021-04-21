@@ -54,7 +54,7 @@ else:   # poky
         PYTHON_BIN = os.path.join(poky.installation_path(), 'python37_win', 'python.exe')               # Windows
     if not os.path.exists(PYTHON_BIN):
         print('Poky Python was not found!')
-        PYTHON_BIN = 'pyhton'
+        PYTHON_BIN = 'python'
         
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
