@@ -832,7 +832,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     if OS_WINDOWS:
         CPUs = '1'
         
-    ucsftool_nmrglue = self.ucsftool_nmrglue.get().lower().strip()
+    if sys.version_info[0] > 2:    
+        ucsftool_nmrglue = self.ucsftool_nmrglue.get().lower().strip()
+    else:
+        ucsftool_nmrglue = 'ucsftool'
 
     cmd = (PYTHON_BIN + " " + os.path.join(IPICK_PATH, "iPick.py") +
             " -i " + "\"" + UCSF_FILE + "\"" +
