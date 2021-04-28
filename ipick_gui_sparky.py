@@ -40,9 +40,9 @@ if 'sparky' in sys.modules:
     # if the version for the python packaged with Sparky changed, correct the lines bellow:
     PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'bin', 'python2.7')      # Linux
     if not os.path.exists(PYTHON_BIN):
-        PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python')            # Windows
+        PYTHON_BIN = os.path.join(sparky.installation_path(), 'python2.7', 'python.exe')        # Windows
     if not os.path.exists(PYTHON_BIN):
-        print('Poky Python was not found!')
+        print('Sparky Python was not found!')
         PYTHON_BIN = 'pyhton'
         
 else:   # poky
