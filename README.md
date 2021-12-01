@@ -7,8 +7,8 @@ _______________________________________________________
 
 The iPick program is available as a module for the POKY and NMRFAM-SPARKY. It is highly recommended that you use the module instead of the command line tool. The main reasons are the ease of work and the extended capabilities provided in the module. For example, using the module, you can easily select the experiment you are interested in and click a button to perform the peak picking task.
 There are also many capabilities built into the module. One example is the newly proposed *Reliability Score* feature that can help a researcher to determine the noise peaks easily.
-    
-    
+
+
 _______________________________________________________
 
 ## Running the iPick module
@@ -23,8 +23,8 @@ If you are using POKY, you can open the iPick module by using the _two-letter-co
 
 If you are using NMRFAM-SPARKY, you can open the iPick module by using the _two-letter-code_ **iP**.
 Alternatively, you can use the top menu and open "Extensions", from there, navigate to "Peak" menu and find "iPick Peak Picker".
-    
-    
+
+
 _______________________________________________________
 
 ## Downloading and Running the Code
@@ -86,8 +86,8 @@ Finally, run the module by running this command in the Python module window:
 This will open the iPick window and let you use the module.
 
 <img src="figures/run.png" width="600" border="1">
-    
-    
+
+
 _______________________________________________________
 
 ## Capabilities
@@ -115,8 +115,8 @@ Each peak will be examined and corresponding peaks in other spectra will be note
 The frequency of the resonances for each peak will be visualized in the Peak Histogram (Figure below) by clicking the Peak Histogram button of the cross-validation window. Less frequently occurring resonances help the user to identify false-positives. It is also possible for the user to view associated histogram bars on the histogram by selecting one or more peaks from the spectral views and clicking the Show the selected peaks button.
 
 <img src="figures/histogram.png" width="900" border="1">
-    
-    
+
+
 _______________________________________________________
 
 ## Standalone usage
@@ -138,8 +138,8 @@ Here is an example of running iPick script:
 	python iPick.py -i ~/Ubiquitin_NMRFAM/Spectra/CHSQC.ucsf -o peaks.list -r 1 --threshold 50325.0 --overwrite -c 1
 
 In this example, the input file is a CHSQC experiment and the output file (the list of the found peaks) will be named "peaks.list" in the current directory. Also, a threshold of 50325.0 has been defined. The last part of the command, "-c 1", indicates that we want to use only one CPU process. This number can be increased as needed.
-    
-    
+
+
 _______________________________________________________
 
 ## Windows Users
@@ -149,14 +149,15 @@ The iPick program runs natively on Mac, Linux and Windows. However, multiprocess
 https://www.windowscentral.com/how-install-wsl2-windows-10
 
 Alternatively, NMRbox.org can be considered. NMRbox provides cloud-based virtual machines for NMR software.
-    
-    
+
+
 _______________________________________________________
 
 ## Acknowledgments
 
 #### Citation
-The iPick paper information will be posted here in future.
+Rahimi, Mehdi, Yeongjoon Lee, John L. Markley, and Woonghee Lee. "iPick: Multiprocessing software for integrated NMR signal detection and validation." Journal of Magnetic Resonance 328 (2021): 106995.
+https://doi.org/10.1016/j.jmr.2021.106995
 
 
 #### Contributions

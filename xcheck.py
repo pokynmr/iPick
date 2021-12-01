@@ -23,7 +23,7 @@ try:
 except:
   import poky
   from poky import sputil, tkutil, pyutil
-  
+
 import peak_list_dialog
 from itertools import combinations
 import collections
@@ -190,7 +190,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.bin_N = tkutil.entry_field(bins_frm, '15N:', width=5, initial='0.2')
     self.bin_N.frame.pack(side='left', padx=(3,10))
     tkutil.create_hint(self.bin_N.frame, 'Bin steps for N histogram')
-    
+
     self.bin_C = tkutil.entry_field(bins_frm, '13C:', width=5, initial='0.2')
     self.bin_C.frame.pack(side='left', padx=(3,10))
     tkutil.create_hint(self.bin_C.frame, 'Bin steps for C histogram')
@@ -206,8 +206,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     peaklist_button = tk.Button(buttonsfrm1, text='Peak List', width=10, command=self.show_peak_list)
     peaklist_button.pack(side='left')
     tkutil.create_hint(peaklist_button, 'Shows the Peak list')
-    
-    
+
+
     hist_button = tk.Button(buttonsfrm2, text='Peak Histogram', width=16,  command=self.run_histogram)
     hist_button.pack(side='left')
     tkutil.create_hint(hist_button, 'Generates and shows the histograms for the peak resonances.')
@@ -296,7 +296,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.specs_peaks.append(self.spec_list[spec_id].peak_list())
         self.specs_nuclei.append(self.spec_list[spec_id].nuclei)
         self.specs_names.append(self.spec_list[spec_id].name)
-    
+
 
 # ---------------------------------------------------------------------------
   def run_xcheck_button(self):
@@ -321,7 +321,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
     if num_of_specs == 1:
         tkMessageBox.showwarning(title='Error!', message='You need to select at least two experiments to validate against each other')
         return
-    
+
     for spec in self.specs_peaks:
         for peak in spec:
             if self.note_append.get():
@@ -332,7 +332,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
                     xcheck_str_start = peak.note.find('xcheck:')
                     if xcheck_str_start == 0:
                         peak.note = 'xcheck:'
-                    elif xcheck_str_start > 0:   
+                    elif xcheck_str_start > 0:
                         peak.note = peak.note[ : xcheck_str_start] + 'xcheck:'
                     else:
                         peak.note += ';xcheck:'
@@ -347,8 +347,8 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
         if (self.specs_nuclei[s1][0] != self.specs_nuclei[s2][0]):
             continue
         total_peaks += len(self.specs_peaks[s1]) * len(self.specs_peaks[s2])
-            
-            
+
+
     processed_peaks = 0
     for spec_pair in combinations_list:
         self.top.update()
@@ -389,7 +389,7 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
 
             match_flag = 0
             for j, peak2 in enumerate(self.specs_peaks[s2]):
-            
+
                 #print 'Peak2 ' + str(j) + ': '
                 #print(peak2.frequency)
 
@@ -414,13 +414,13 @@ class xcheck_dialog(tkutil.Dialog, tkutil.Stoppable):
             if match_flag == 0:
                 print('\n' + '*' * 20 + '\nNo match:')
                 print(peak1.frequency)
-                
-                
-            processed_peaks += len(self.specs_peaks[s2]) 
+
+
+            processed_peaks += len(self.specs_peaks[s2])
             percent = "{:2.0f}".format(100 * processed_peaks / total_peaks)
             self.status.config(text="Status: Running ... (" + percent + "%)")
             self.status.update()
-            
+
 
         print('_' * 50)
 
@@ -594,14 +594,14 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     self.plot_frame = tk.Frame(self.top)
     self.plot_frame.pack(side='top', expand=1, padx=4, pady=(3,0))
-    
+
     button_frame = tk.Frame(self.top)
     button_frame.pack(side='top', pady=(0,15), anchor='center')
 
     self.show_select_button = tk.Button(button_frame, text='Zoom in on selected peak(s)', command=self.show_peak_in_hist)
     self.show_select_button.pack(side='left')
     tkutil.create_hint(self.show_select_button, 'Select one or more peaks in the experiment and click this button to show them on the histograms')
-        
+
     self.zoom_out_button = tk.Button(button_frame, text='Zoom Out', command=self.zoom_out)
     self.zoom_out_button.pack(side='left', padx=2)
     tkutil.create_hint(self.zoom_out_button, 'Zoom out the view on all figures')
@@ -646,7 +646,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     toolbar = NavTB(self.canvas, self.plot_frame)
     toolbar.update()
-    
+
     self.ax0_xlim = self.axes[0].get_xlim()
     self.ax0_ylim = self.axes[0].get_ylim()
     self.ax1_xlim = self.axes[1].get_xlim()
@@ -660,7 +660,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     spec = self.session.selected_spectrum()
     peaks = self.session.selected_peaks()
     text_style = dict(size=30)
-    
+
     if not peaks:
         tkMessageBox.showwarning(title='Error', message='You need to select some peaks on a spectrum first!')
         return
@@ -691,9 +691,9 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         for peak in peaks:
             self.txt.append(this_axes.text(peak.frequency[n], 0, 'x', **text_style))
             this_range.append(peak.frequency[n])
-           
-            
-    # zoom in        
+
+
+    # zoom in
     if H_list:
         H_min = min(H_list)
         H_max = max(H_list)
@@ -701,15 +701,15 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         max_range = max(self.ax0_xlim) - min(self.ax0_xlim)
         if (H_hrange > max_range) or (H_hrange < max_range*0.1):
             H_hrange = max_range*0.1
-        
+
         H_heights = []
         for i in H_list:
-            val = self.H_hist.get(i) or self.H_hist[min(self.H_hist.keys(), key = lambda key: abs(key-i))] 
+            val = self.H_hist.get(i) or self.H_hist[min(self.H_hist.keys(), key = lambda key: abs(key-i))]
             H_heights.append(val)
-            
+
         self.axes[0].set_xlim(H_min - H_hrange, H_max + H_hrange)
         self.axes[0].set_ylim(0, max(H_heights)*1.1)  # 10% more than the highest bar for "those" shifts
-    
+
     if N_list:
         N_min = min(N_list)
         N_max = max(N_list)
@@ -717,15 +717,15 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         max_range = max(self.ax1_xlim) - min(self.ax1_xlim)
         if (N_hrange > max_range) or (N_hrange < max_range*0.1):
             N_hrange = max_range*0.1
-        
+
         N_heights = []
         for i in N_list:
-            val = self.N_hist.get(i) or self.N_hist[min(self.N_hist.keys(), key = lambda key: abs(key-i))] 
+            val = self.N_hist.get(i) or self.N_hist[min(self.N_hist.keys(), key = lambda key: abs(key-i))]
             N_heights.append(val)
-            
+
         self.axes[1].set_xlim(N_min - N_hrange, N_max + N_hrange)
-        self.axes[1].set_ylim(0, max(N_heights)*1.1)  
-    
+        self.axes[1].set_ylim(0, max(N_heights)*1.1)
+
     if C_list:
         C_min = min(C_list)
         C_max = max(C_list)
@@ -733,16 +733,16 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
         max_range = max(self.ax2_xlim) - min(self.ax2_xlim)
         if (C_hrange > max_range) or (C_hrange < max_range*0.1):
             C_hrange = max_range*0.1
-        
+
         C_heights = []
         for i in C_list:
-            val = self.C_hist.get(i) or self.C_hist[min(self.C_hist.keys(), key = lambda key: abs(key-i))] 
+            val = self.C_hist.get(i) or self.C_hist[min(self.C_hist.keys(), key = lambda key: abs(key-i))]
             C_heights.append(val)
-            
+
         self.axes[2].set_xlim(C_min - C_hrange, C_max + C_hrange)
-        self.axes[2].set_ylim(0, max(C_heights)*1.1)         
-            
-            
+        self.axes[2].set_ylim(0, max(C_heights)*1.1)
+
+
     self.canvas.draw()
 
 
@@ -755,7 +755,7 @@ class hist_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.axes[2].set_xlim(self.ax2_xlim)
     self.axes[2].set_ylim(self.ax2_ylim)
     self.canvas.draw()
-    
+
 
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
