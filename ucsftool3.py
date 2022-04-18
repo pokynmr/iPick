@@ -1427,8 +1427,8 @@ class ucsfTool:
         # write header
         self.write_ucsf_file_header(f, self.file_header)
         # write axis header
-        for _ in range(self.ndim):
-            self.write_ucsf_axis_header(f, self.ndim)
+        for i in range(self.ndim):
+            self.write_ucsf_axis_header(f, self.axis_header_list[i])
         # write data
         data_count = (self.file_size - (180+128*self.ndim)) // 4
         self.file_object[0].seek(180+128*self.ndim)
@@ -1889,13 +1889,13 @@ class ucsfTool:
     def write_ucsf_file_header(self, file_object, file_header):
         f = file_object
         f.seek(0)
-        f.write(struct.pack('10s', 'UCSF NMR'))
+        f.write(struct.pack('10s', 'UCSF NMR'.encode()))
         f.write(struct.pack('B', file_header['DimCount']))
         f.write(struct.pack('2B', file_header['DataCompCount'], 0))
         f.write(struct.pack('B', file_header['FileVersion']))    # 14 bytes
         # 180 byte: header + 166 bytes
         dstr = datetime.datetime.now().strftime('%Y-%m-%d')
-        f.write(struct.pack('30s', "Woonghee's ucsftool %s" % (dstr)))
+        f.write(struct.pack('30s', ("Woonghee's ucsftool " + dstr).encode()))
         for _ in range(2):  # 136 bytes
             f.write(struct.pack('8d', 0, 0, 0, 0, 0, 0, 0, 0))
         f.write(struct.pack('d', 0))  # cap 180 bytes
@@ -1905,7 +1905,7 @@ class ucsfTool:
     #
     def write_ucsf_axis_header(self, file_object, axis_header):
         f = file_object
-        f.write(struct.pack('6s', axis_header['AtomName']))
+        f.write(struct.pack('6s', axis_header['AtomName'].encode()))
         f.write(struct.pack('2B', 0, 0))
         f.write(struct.pack('>I', axis_header['DataPointCount']))
         f.write(struct.pack('4B', 0, 0, 0, 0))
