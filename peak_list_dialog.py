@@ -23,8 +23,10 @@ try:
 except:
   import poky
   from poky import sputil, tkutil, pyutil
-  
-  
+
+import cluster_score
+import nmrglue as ng
+
 class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
   def __init__(self, session):
@@ -47,7 +49,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     spectra_list_names = []
     for spec in self.spec_list:
         spectra_list_names.append(spec.name)
-         
+
     self.spectrum_selection = tk.StringVar()
     self.spectrum_selection.set(spectra_list_names[0])
 
@@ -56,11 +58,11 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     spectra_list_menu = tk.OptionMenu(spectra_list_frame, self.spectrum_selection, *spectra_list_names, command=self.change_spectrum)
     spectra_list_menu.pack(side='left', anchor='w')
-    
-    
+
+
     peak_list_frame = tk.Frame(self.top)
     peak_list_frame.pack(side='top', expand=1, fill="both")
-    
+
     self.pl = sputil.peak_listbox(peak_list_frame)
     self.pl.frame.pack(side='top', fill='both', expand=1)
     self.pl.listbox['selectmode'] = 'extended'
@@ -68,12 +70,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.pl.listbox.bind('<ButtonRelease-2>', self.pl.goto_peak_cb)
     self.pl.listbox.bind('<Double-ButtonRelease-1>', self.pl.goto_peak_cb)
     self.peak_list = self.pl
-    
+
 #    xscroll = tk.Scrollbar(peak_list_frame, orient='horizontal', command=self.pl.listbox.xview)
 #    xscroll.pack(side='top', expand=0, fill="x")
 #    self.pl.listbox['xscrollcommand'] = xscroll.set
-      
-      
+
+
 #    # fix the fonts
 #    suggested_fonts = ['Arial', 'NotoSans', 'Ubuntu', 'SegoeUI', 'Helvetica',
 #                       'Calibri', 'Verdana', 'DejaVuSans', 'FreeSans']
@@ -87,12 +89,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     progress_label.pack(side='top', anchor='w')
 
     br = tkutil.button_row(self.top,
-               ('Update', self.update_cb),
-               ('Setup...', self.setup_cb),
-               ('Sort by height', self.sort_cb),
-               ('Sort by Reliability Score', self.sort_rs),
-               ('Sort by Total Corresponding Peaks', self.sort_total_corr),
-               )
+                                ('Update', self.update_cb),
+                                ('Setup...', self.setup_cb),
+                                ('Sort by height', self.sort_cb),
+                                ('Sort by Reliability Score', self.sort_rs),
+                                ('Sort by Total Corresponding Peaks', self.sort_total_corr),
+                                )
     br.frame.pack(side='top', anchor='w')
 
     rs_frame = tk.Frame(self.top)
@@ -115,16 +117,19 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(remove_rs0_button,
                        'Remove peaks with "ABSOLUTE Reliability Score" below this threshold')
 
+    reden_score_label = tk.Label(self.top, text="Peaks with * in their assignment name may be a candidate for REDEN")
+    reden_score_label.pack(side='top', anchor='w', padx=5)
+
     cv_frame = tk.Frame(self.top)
     cv_frame.pack(anchor='w')
 
     cv = tkutil.button_row(cv_frame,
-               ('Remove Lone Peaks', self.remove_peaks),
-               ('Save...', self.peak_list.save_cb),
-               ('Stop', self.stop_cb),
-               ('Close', self.close_cb),
-               ('Help', sputil.help_cb(session, 'PeakListPython')),
-               )
+                               ('Remove Lone Peaks', self.remove_peaks),
+                               ('Save...', self.peak_list.save_cb),
+                               ('Stop', self.stop_cb),
+                               ('Close', self.close_cb),
+                               ('Help', sputil.help_cb(session, 'PeakListPython')),
+                               )
     cv.frame.pack(side='left', anchor='w')
 
     tkutil.create_hint(cv.buttons[0], 'Remove peaks that have no corresponding peaks (Total:0, xcheck:0)')
@@ -135,7 +140,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     tkutil.Stoppable.__init__(self, progress_label, cv.buttons[2])
     self.change_spectrum()
-    
+
 
   # ---------------------------------------------------------------------------
   #
@@ -145,7 +150,6 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
             self.spectrum = spec
             break
     self.show_spectrum_peaks(self.spectrum)
-
 
   # ---------------------------------------------------------------------------
   #
@@ -193,12 +197,16 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
   #
   def show_spectrum_peaks(self, spectrum):
 
+    global dic, data
+
     self.title = spectrum.name + ' peak list'
     self.top.title(self.title)
     self.spectrum = spectrum
     self.peaks = None
     self.stoppable_call(self.update_peaks)
     self.spectrum_selection.set(spectrum.name)
+
+    dic, data = ng.sparky.read(spectrum.data_path)
 
   # ---------------------------------------------------------------------------
   #
@@ -287,15 +295,15 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 
     # sort by intensity
-    data = []
+    pack = []
     for peak in peaks:
-      data.append((peak.data_height, peak))
+      pack.append((peak.data_height, peak))
 
     peaks = []
     # sort by x_pos
-    data = sorted(data, key=lambda data: data[0], reverse=True)
+    pack = sorted(pack, key=lambda pack: pack[0], reverse=True)
 
-    for (height, peak) in data:
+    for (height, peak) in pack:
       peaks.append(peak)
 
     self.field_initializations(peaks)
@@ -328,12 +336,12 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     total_has_value = False
     # sort by total corresponding peaks
-    data = []
+    pack = []
     for peak in peaks:
         total = total_corresponding(peak)
         if total > 0:
             total_has_value = True
-        data.append((total, peak))
+        pack.append((total, peak))
 
     if total_has_value == False:
         tkMessageBox.showwarning(title='Error', message='You need to run the Cross-Validation first!')
@@ -341,9 +349,9 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
         return
 
     peaks = []
-    data = sorted(data, key=lambda data: data[0], reverse=True)
+    pack = sorted(pack, key=lambda pack: pack[0], reverse=True)
 
-    for (TC, peak) in data:
+    for (TC, peak) in pack:
       peaks.append(peak)
 
     self.field_initializations(peaks)
@@ -354,7 +362,7 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
     for rank, peak in enumerate(peaks):
       self.check_for_stop()
       self.peak_list.append(self.peak_line(peak, rank), peak)
-      
+
   # ---------------------------------------------------------------------------
   #
   def sort_reliability(self):
@@ -376,10 +384,10 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     RS_has_value = False
     # sort by reliability score
-    data = []
+    pack = []
     for peak in peaks:
         RS = reliability_score(peak)
-        data.append((RS, peak))
+        pack.append((RS, peak))
         if RS > 0:
             RS_has_value = True
 
@@ -389,9 +397,9 @@ class peak_list_dialog(tkutil.Dialog, tkutil.Stoppable):
         return
 
     peaks = []
-    data = sorted(data, key=lambda data: data[0], reverse=True)
+    pack = sorted(pack, key=lambda pack: pack[0], reverse=True)
 
-    for (RS, peak) in data:
+    for (RS, peak) in pack:
       peaks.append(peak)
 
     self.field_initializations(peaks)
@@ -535,7 +543,36 @@ def total_corresponding(peak):
         return 0
     else:
         return int(peak.note[xcheck_total_start + len('Total:') : ].split(',')[0])
-           
+
+
+# ---------------------------------------------------------------------------
+#
+def get_view(peak):
+    for view in peak.spectrum.session.project.view_list():
+      if view.spectrum == peak.spectrum:
+        return view
+    return None
+
+# ---------------------------------------------------------------------------
+#
+def get_cluster_score(peak):
+    view = get_view(peak)
+    pos_level = view.positive_levels.lowest
+    neg_level = view.negative_levels.lowest
+
+    w1 = 2
+    if 'H' in dic['w1']['nucleus']:
+        w1 = 0.2
+
+    w2 = 2
+    if 'H' in dic['w2']['nucleus']:
+        w2 = 0.2
+
+    return cluster_score.get_factor(dic, data,
+                                    peak.position[0], peak.position[1],
+                                    w1, w2,     # expanding w1 and w2 in both directions to select the cluster
+                                    pos_level, neg_level)
+
 # ---------------------------------------------------------------------------
 #
 def reliability_score(peak):
@@ -590,7 +627,11 @@ field_classes = []
 class assignment_field(peak_list_field):
   name = 'Assignment'
   def size(self, dim): return 8 * dim
-  def text(self, peak): return sputil.assignment_name(peak.resonances())
+  def text(self, peak):
+    if get_cluster_score(peak) > 16:
+        return sputil.assignment_name(peak.resonances()) + "*"
+    else:
+        return sputil.assignment_name(peak.resonances())
 field_classes.append(assignment_field)
 
 # -------------------------------------------------------------------------
@@ -610,11 +651,11 @@ class volume_field(peak_list_field):
   def size(self, dim): return 12
   def text(self, peak):
     fmt = '{:^%d}' % 12
-        
+
     if peak.volume:
         vol = '%.3g' % peak.volume
         return fmt.format(vol)
-        
+
     return ''
 field_classes.append(volume_field)
 
@@ -680,6 +721,15 @@ field_classes.append(RS_field)
 
 # -------------------------------------------------------------------------
 #
+class cluster_score_field(peak_list_field):
+  name = 'REDEN Score'
+  def title(self, dim): return 'REDEN Score'
+  def size(self, dim): return 20
+  def text(self, peak): return ' %7.2f' % get_cluster_score(peak)
+field_classes.append(cluster_score_field)
+
+# -------------------------------------------------------------------------
+#
 class xcheck_field(peak_list_field):
   name = 'Total Corr.'
   def size(self, dim): return 13
@@ -694,6 +744,14 @@ class note_field(peak_list_field):
   def text(self, peak): return ' %-20s' % peak.note
 field_classes.append(note_field)
 
+
+# -------------------------------------------------------------------------
+#
+class fit_residual(peak_list_field):
+  name = 'Fit residual'
+  def size(self, dim): return 10
+  def text(self, peak): return ' %.3f' % peak.fit_residual
+field_classes.append(fit_residual)
 
 # -----------------------------------------------------------------------------
 # Dialog of possible peak list fields.

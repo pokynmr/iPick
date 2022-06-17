@@ -4,6 +4,11 @@
 iPick GUI for Sparky
 
 @author: Mehdi Rahimi
+
+# Run this by:
+#  sys.path.append('/home/samic/MyWorks/CODES/iPick'); import ipick_gui_sparky;
+#  reload(ipick_gui_sparky); ipick_gui_sparky.show_ipick_dialog(s)
+
 """
 
 import os
@@ -44,7 +49,7 @@ if 'sparky' in sys.modules:
     if not os.path.exists(PYTHON_BIN):
         print('Sparky Python was not found!')
         PYTHON_BIN = 'pyhton'
-        
+
 else:   # poky
     # if the version for the python packaged with Poky changed, correct the lines bellow:
     PYTHON_BIN = os.path.join(poky.installation_path(), 'bin', 'python3.7m')                            # Mac
@@ -55,7 +60,7 @@ else:   # poky
     if not os.path.exists(PYTHON_BIN):
         print('Poky Python was not found!')
         PYTHON_BIN = 'python'
-        
+
 
 IPICK_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_FILE = os.path.join(tempfile.gettempdir(), 'process.log')   # '/tmp/process.log' for Linux/Mac
@@ -159,7 +164,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     # buttons
     b_buttons_frm1 = tk.Frame(self.basic_frame)
     b_buttons_frm1.pack(fill='both', expand=1, padx=(20,0), pady=(30,2))
-    
+
     b_buttons_frm2 = tk.Frame(self.basic_frame)
     b_buttons_frm2.pack(fill='both', expand=1, padx=(20,0), pady=(0,30))
 
@@ -203,7 +208,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.b_stop_button.pack(side='left')
     tkutil.create_hint(self.b_stop_button, 'Stops any processing')
 
-   
+
     b_xcheck_button = tk.Button(b_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
     b_xcheck_button.pack(side='left')
     tkutil.create_hint(b_xcheck_button, 'Opens the Cross-Validation module for investigating the peaks / finding noise peaks')
@@ -261,7 +266,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     # software
     a_software_frm = tk.Frame(self.adv_frame)
     a_software_frm.pack(fill='both', expand=1, padx=8, pady=(8,0))
-    
+
 
     # pos neg peaks
     a_pos_neg_frm = tk.Frame(self.adv_frame)
@@ -314,10 +319,10 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         self.ucsftool_nmrglue = Combobox(a_software_frm, values=[' UCSFtool ', ' nmrglue '], state='readonly', width=9)
         self.ucsftool_nmrglue.current(0)
         self.ucsftool_nmrglue.pack(side='left')
-        
+
         tkutil.create_hint(a_software_label, 'Select the backbone software for detecting the local extrema.')
-        tkutil.create_hint(self.ucsftool_nmrglue, 'Select the backbone software for detecting the local extrema.')   
-            
+        tkutil.create_hint(self.ucsftool_nmrglue, 'Select the backbone software for detecting the local extrema.')
+
 
 
     pos_neg_label = tk.Label(a_pos_neg_frm, text="Select:")
@@ -339,8 +344,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     tkutil.create_hint(radio_pos, 'Select positive peaks only')
     tkutil.create_hint(radio_neg, 'Select negative peaks only')
     tkutil.create_hint(radio_both, 'Select both positive and negative peaks')
-    
-    
+
+
     nois_cont_label = tk.Label(a_nois_cont_frm, text="Use:")
     nois_cont_label.pack(side='left', fill='both')
     self.nois_cont = tk.StringVar()
@@ -483,7 +488,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
     a_buttons_frm2 = tk.Frame(a_btmfrm)
     a_buttons_frm2.pack(fill='both', expand=1, padx=(15,0), pady=(0,10))
-    
+
 
     a_ipick_button = tk.Button(a_buttons_frm1, text='Run iPick', width=22, command=self.run_ipick)
     a_ipick_button.pack(side='left')
@@ -495,7 +500,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     self.a_stop_button = tk.Button(a_buttons_frm1, text='Stop', command=self.stop_button)
     self.a_stop_button.pack(side='left')
     tkutil.create_hint(self.a_stop_button, 'Stops any processing')
-    
+
 
     a_xcheck_button = tk.Button(a_buttons_frm2, text='Cross-Validation', width=22, command=self.run_xcheck)
     a_xcheck_button.pack(side='left')
@@ -637,7 +642,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
         d.show_spectrum_peaks(self.spectrum)
         dialogs[self.spectrum] = d
         d.sort_reliability()
-   
+
 
 # ---------------------------------------------------------------------------
   #
@@ -831,8 +836,8 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     CPUs = str(multiprocessing.cpu_count())
     if OS_WINDOWS:
         CPUs = '1'
-        
-    if sys.version_info[0] > 2:    
+
+    if sys.version_info[0] > 2:
         ucsftool_nmrglue = self.ucsftool_nmrglue.get().lower().strip()
     else:
         ucsftool_nmrglue = 'ucsftool'
@@ -1049,7 +1054,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
 
 # ---------------------------------------------------------------------------
   def find_peaklist_file(self):
-  
+
     UCSF_FILE = self.spectrum.data_path
 
     experiment_file = os.path.split(UCSF_FILE)[1]
@@ -1080,7 +1085,7 @@ class ipick_dialog(tkutil.Dialog, tkutil.Stoppable):
     status.update()
 
     self.find_peaklist_file()
-    
+
     try:
         print("Importing the peaks from: " + self.PEAKLIST_FILE)
     except:
