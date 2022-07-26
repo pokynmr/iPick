@@ -568,10 +568,15 @@ def get_cluster_score(peak):
     if 'H' in dic['w2']['nucleus']:
         w2 = 0.2
 
-    return cluster_score.get_factor(dic, data,
-                                    peak.position[0], peak.position[1],
-                                    w1, w2,     # expanding w1 and w2 in both directions to select the cluster
-                                    pos_level, neg_level)
+    try:
+        this_score = cluster_score.get_factor(dic, data,
+                                              peak.position[0], peak.position[1],
+                                              w1, w2,     # expanding w1 and w2 in both directions to select the cluster
+                                              pos_level, neg_level)
+    except:
+        this_score = 0
+
+    return this_score
 
 # ---------------------------------------------------------------------------
 #
